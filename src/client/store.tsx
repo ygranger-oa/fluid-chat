@@ -157,6 +157,7 @@ type Action =
   | { type: "prune-typing" }
   | { type: "notifications"; notifications: NotificationDto[]; unreadCount: number }
   | { type: "notification"; notification: NotificationDto }
+  | { type: "increment-unread"; conversationId: string }
   | { type: "read"; conversationId: string; lastReadAt: string | null }
   | { type: "unread-marker"; conversationId: string; messageId: string | null }
   | { type: "draft"; key: string; bodyText: string }
@@ -357,6 +358,20 @@ function reducer(state: State, action: Action): State {
         notifications: [action.notification, ...state.notifications].slice(0, 100),
         unreadNotifications: state.unreadNotifications + 1
       };
+    case "increment-unread":
+      return state.bootstrap
+        ? {
+            ...state,
+            bootstrap: {
+              ...state.bootstrap,
+              conversations: state.bootstrap.conversations.map((conversation) =>
+                conversation.id === action.conversationId
+                  ? { ...conversation, unreadCount: conversation.unreadCount + 1 }
+                  : conversation
+              )
+            }
+          }
+        : state;
     case "read":
       return state.bootstrap
         ? {
@@ -954,6 +969,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             if (active && document.visibilityState === "visible") {
               void actions.markRead(event.conversationId, event.message.id);
             } else {
+              dispatch({ type: "increment-unread", conversationId: event.conversationId });
               void actions.refreshConversations();
             }
 
