@@ -319,7 +319,7 @@ function useDesktopNotifications() {
       const banner = new Notification("Fluid Chat", {
         body: entry.body ?? "New activity",
         tag: entry.id,
-        icon: "/icon.svg"
+        icon: "/logo_fluid_192.png"
       });
       banner.onclick = () => {
         window.focus();
