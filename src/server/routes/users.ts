@@ -32,6 +32,7 @@ const profileSchema = z.object({
 
 const preferencesSchema = z.object({
   theme: z.enum(["light", "dark", "system"]).optional(),
+  language: z.enum(["system", "en", "fr"]).optional(),
   messageDensity: z.enum(["comfortable", "compact"]).optional(),
   timeFormat: z.enum(["12h", "24h"]).optional(),
   enterToSend: z.boolean().optional(),

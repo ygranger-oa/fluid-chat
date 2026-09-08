@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import type { PublicUser } from "@/shared/types";
 import { initialsFor } from "../../format";
+import { useI18n } from "../../i18n";
 
 /* -------------------------------------------------------------------------- */
 /* Avatar                                                                      */
@@ -50,8 +51,9 @@ export function Avatar({
 }
 
 export function PresenceDot({ presence, size = 36 }: { presence: PublicUser["presence"]; size?: number }) {
+  const { t } = useI18n();
   const label =
-    presence === "active" ? "Active" : presence === "away" ? "Away" : presence === "dnd" ? "Do not disturb" : "Offline";
+    presence === "active" ? t("app.active") : presence === "away" ? t("app.away") : presence === "dnd" ? t("app.dnd") : t("app.offline");
   return (
     <span
       className={`presence-dot presence-${presence}`}

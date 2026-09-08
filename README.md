@@ -76,6 +76,7 @@ docker compose up
 
 **Preferences**
 - Light and dark themes (or match the OS), comfortable/compact density, 12h/24h clocks
+- UI language preference with browser-language detection; available languages: English (`en`) and French (`fr`)
 - Enter-to-send toggle, notification levels, highlight keywords, desktop notifications, sounds, session management
 - Notification schedule (quiet hours) evaluated in your own timezone, honored by sounds, desktop alerts and email
 

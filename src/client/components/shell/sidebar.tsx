@@ -20,11 +20,13 @@ import {
 } from "lucide-react";
 import type { ConversationSummary } from "@/shared/types";
 import { api } from "../../api";
+import { useI18n } from "../../i18n";
 import { conversationTitle, useApp, useDirectory, type View } from "../../store";
 import { Avatar, Badge, MenuDivider, MenuItem, Popover } from "../ui/primitives";
 
 export function Sidebar() {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const directory = useDirectory();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const workspace = state.bootstrap?.workspace;
@@ -69,14 +71,14 @@ export function Sidebar() {
   };
 
   return (
-    <nav className="sidebar" aria-label="Workspace navigation">
+    <nav className="sidebar" aria-label={t("sidebar.navigation")}>
       <Popover
         width={280}
         trigger={({ toggle, ref }) => (
           <button type="button" className="workspace-button" onClick={toggle} ref={ref}>
             <span className="workspace-name">
               {workspace?.iconEmoji ? <span aria-hidden>{workspace.iconEmoji}</span> : null}
-              {workspace?.name ?? "Workspace"}
+              {workspace?.name ?? t("app.workspaceFallback")}
             </span>
             <ChevronDown size={16} />
           </button>
@@ -94,7 +96,7 @@ export function Sidebar() {
                 close();
               }}
             >
-              <Users size={14} /> Invite people
+              <Users size={14} /> {t("sidebar.invitePeople")}
             </MenuItem>
             <MenuItem
               onClick={() => {
@@ -102,7 +104,7 @@ export function Sidebar() {
                 close();
               }}
             >
-              <Hash size={14} /> Create a channel
+              <Hash size={14} /> {t("sidebar.createChannel")}
             </MenuItem>
             {isAdmin ? (
               <MenuItem
@@ -111,12 +113,12 @@ export function Sidebar() {
                   close();
                 }}
               >
-                <MoreHorizontal size={14} /> Workspace settings
+                <MoreHorizontal size={14} /> {t("sidebar.workspaceSettings")}
               </MenuItem>
             ) : null}
             <MenuDivider />
             <div className="menu-heading">
-              <span>Switch workspace</span>
+              <span>{t("sidebar.switchWorkspace")}</span>
             </div>
             {state.memberships.map((membership) => (
               <MenuItem
@@ -138,26 +140,26 @@ export function Sidebar() {
                 close();
               }}
             >
-              <Plus size={14} /> Create a workspace
+              <Plus size={14} /> {t("sidebar.createWorkspace")}
             </MenuItem>
           </div>
         )}
       </Popover>
 
       <div className="side-nav">
-        {navItem({ kind: "threads" }, "Threads", <MessageSquare size={16} />)}
-        {navItem({ kind: "activity" }, "Activity", <AtSign size={16} />, state.unreadNotifications)}
-        {navItem({ kind: "unreads" }, "All unreads", <Inbox size={16} />)}
-        {navItem({ kind: "drafts" }, "Drafts & sent", <PenSquare size={16} />)}
-        {navItem({ kind: "saved" }, "Later", <Bookmark size={16} />)}
-        {navItem({ kind: "files" }, "Files", <FileText size={16} />)}
-        {navItem({ kind: "people" }, "People", <Users size={16} />)}
+        {navItem({ kind: "threads" }, t("sidebar.threads"), <MessageSquare size={16} />)}
+        {navItem({ kind: "activity" }, t("sidebar.activity"), <AtSign size={16} />, state.unreadNotifications)}
+        {navItem({ kind: "unreads" }, t("sidebar.allUnreads"), <Inbox size={16} />)}
+        {navItem({ kind: "drafts" }, t("sidebar.draftsSent"), <PenSquare size={16} />)}
+        {navItem({ kind: "saved" }, t("sidebar.later"), <Bookmark size={16} />)}
+        {navItem({ kind: "files" }, t("common.files"), <FileText size={16} />)}
+        {navItem({ kind: "people" }, t("sidebar.people"), <Users size={16} />)}
       </div>
 
       <div className="side-scroll">
         {groups.starred.length > 0 ? (
           <SidebarSection
-            title="Starred"
+            title={t("sidebar.starred")}
             collapsed={collapsed.starred}
             onToggle={() => setCollapsed((value) => ({ ...value, starred: !value.starred }))}
           >
@@ -177,12 +179,12 @@ export function Sidebar() {
             {items.map((conversation) => (
               <ConversationRow key={conversation.id} conversation={conversation} />
             ))}
-            {items.length === 0 ? <p className="side-empty">Drag conversations here from their ⋯ menu.</p> : null}
+            {items.length === 0 ? <p className="side-empty">{t("sidebar.emptySection")}</p> : null}
           </SidebarSection>
         ))}
 
         <SidebarSection
-          title="Channels"
+          title={t("sidebar.channels")}
           collapsed={collapsed.channels}
           onToggle={() => setCollapsed((value) => ({ ...value, channels: !value.channels }))}
           action={
@@ -190,7 +192,7 @@ export function Sidebar() {
               width={240}
               align="end"
               trigger={({ toggle, ref }) => (
-                <button type="button" className="section-action" ref={ref} onClick={toggle} aria-label="Add channels">
+                <button type="button" className="section-action" ref={ref} onClick={toggle} aria-label={t("sidebar.addChannels")}>
                   <Plus size={14} />
                 </button>
               )}
@@ -203,7 +205,7 @@ export function Sidebar() {
                       close();
                     }}
                   >
-                    <Compass size={14} /> Browse channels
+                    <Compass size={14} /> {t("sidebar.browseChannels")}
                   </MenuItem>
                   <MenuItem
                     onClick={() => {
@@ -211,7 +213,7 @@ export function Sidebar() {
                       close();
                     }}
                   >
-                    <Plus size={14} /> Create a channel
+                    <Plus size={14} /> {t("sidebar.createChannel")}
                   </MenuItem>
                 </div>
               )}
@@ -223,12 +225,12 @@ export function Sidebar() {
           ))}
           <button type="button" className="side-row is-muted" onClick={() => actions.setView({ kind: "browse" })}>
             <Plus size={15} />
-            <span className="side-label">Add channels</span>
+            <span className="side-label">{t("sidebar.addChannels")}</span>
           </button>
         </SidebarSection>
 
         <SidebarSection
-          title="Direct messages"
+          title={t("sidebar.directMessages")}
           collapsed={collapsed.dms}
           onToggle={() => setCollapsed((value) => ({ ...value, dms: !value.dms }))}
           action={
@@ -236,7 +238,7 @@ export function Sidebar() {
               type="button"
               className="section-action"
               onClick={() => actions.setModal({ kind: "new-dm" })}
-              aria-label="New direct message"
+              aria-label={t("sidebar.newDirectMessage")}
             >
               <Plus size={14} />
             </button>
@@ -248,7 +250,7 @@ export function Sidebar() {
           {groups.dms.length === 0 ? (
             <button type="button" className="side-row is-muted" onClick={() => actions.setModal({ kind: "new-dm" })}>
               <Send size={15} />
-              <span className="side-label">Start a conversation</span>
+              <span className="side-label">{t("sidebar.startConversation")}</span>
             </button>
           ) : null}
         </SidebarSection>
@@ -258,7 +260,7 @@ export function Sidebar() {
         <div className="sidebar-footer">
           <Avatar user={state.session} size={26} />
           <span className="side-label">{state.session.displayName}</span>
-          {!state.connected ? <span className="connection-dot" title="Reconnecting…" /> : null}
+          {!state.connected ? <span className="connection-dot" title={t("sidebar.reconnecting")} /> : null}
         </div>
       ) : null}
     </nav>
@@ -294,6 +296,7 @@ function SidebarSection({
 
 function ConversationRow({ conversation }: { conversation: ConversationSummary }) {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const directory = useDirectory();
   const active = state.view.kind === "conversation" && state.view.conversationId === conversation.id;
   const unread = conversation.unreadCount > 0;
@@ -321,7 +324,7 @@ function ConversationRow({ conversation }: { conversation: ConversationSummary }
           <Avatar user={other} size={20} />
         )}
         <span className="side-label">{title}</span>
-        {draft?.trim() ? <span className="draft-dot" title="Unsent draft" /> : null}
+        {draft?.trim() ? <span className="draft-dot" title={t("sidebar.unsentDraft")} /> : null}
         {conversation.mentionCount > 0 ? (
           <Badge count={conversation.mentionCount} mention />
         ) : conversation.unreadCount > 0 ? (
@@ -333,7 +336,7 @@ function ConversationRow({ conversation }: { conversation: ConversationSummary }
         width={240}
         align="end"
         trigger={({ toggle, ref }) => (
-          <button type="button" className="side-row-menu" ref={ref} onClick={toggle} aria-label={`Options for ${title}`}>
+          <button type="button" className="side-row-menu" ref={ref} onClick={toggle} aria-label={t("sidebar.optionsFor", { title })}>
             <MoreHorizontal size={14} />
           </button>
         )}
@@ -349,7 +352,7 @@ function ConversationRow({ conversation }: { conversation: ConversationSummary }
                 await actions.refreshConversations();
               }}
             >
-              {conversation.membership?.starred ? "Remove from starred" : "Star conversation"}
+              {conversation.membership?.starred ? t("sidebar.removeFromStarred") : t("sidebar.starConversation")}
             </MenuItem>
             <MenuItem
               onClick={async () => {
@@ -358,7 +361,7 @@ function ConversationRow({ conversation }: { conversation: ConversationSummary }
                 await actions.refreshConversations();
               }}
             >
-              {conversation.membership?.muted ? "Unmute conversation" : "Mute conversation"}
+              {conversation.membership?.muted ? t("sidebar.unmuteConversation") : t("sidebar.muteConversation")}
             </MenuItem>
             <MenuItem
               onClick={async () => {
@@ -367,7 +370,7 @@ function ConversationRow({ conversation }: { conversation: ConversationSummary }
                 await actions.refreshConversations();
               }}
             >
-              Mark as read
+              {t("sidebar.markAsRead")}
             </MenuItem>
             <MenuItem
               onClick={async () => {
@@ -376,7 +379,7 @@ function ConversationRow({ conversation }: { conversation: ConversationSummary }
                 await actions.refreshConversations();
               }}
             >
-              Mark as unread
+              {t("sidebar.markAsUnread")}
             </MenuItem>
             {state.bootstrap?.sections.length ? <MenuDivider /> : null}
             {state.bootstrap?.sections.map((section) => (
@@ -388,7 +391,7 @@ function ConversationRow({ conversation }: { conversation: ConversationSummary }
                   await actions.refreshConversations();
                 }}
               >
-                Move to {section.name}
+                {t("sidebar.moveTo", { section: section.name })}
               </MenuItem>
             ))}
             <MenuDivider />
@@ -405,7 +408,7 @@ function ConversationRow({ conversation }: { conversation: ConversationSummary }
                   }
                 }}
               >
-                Leave channel
+                {t("sidebar.leaveChannel")}
               </MenuItem>
             ) : (
               <MenuItem
@@ -415,7 +418,7 @@ function ConversationRow({ conversation }: { conversation: ConversationSummary }
                   await actions.refreshConversations();
                 }}
               >
-                Close conversation
+                {t("sidebar.closeConversation")}
               </MenuItem>
             )}
           </div>

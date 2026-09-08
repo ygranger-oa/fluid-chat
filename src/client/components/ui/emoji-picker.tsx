@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { EMOJI_CATEGORIES, applySkinTone, emojiChar, frequentEmoji, rememberEmoji, searchEmoji } from "../../emoji";
+import { useI18n } from "../../i18n";
 import { useApp, useCustomEmoji } from "../../store";
 
 /**
@@ -11,6 +12,7 @@ import { useApp, useCustomEmoji } from "../../store";
  */
 export function EmojiPicker({ onPick, onClose }: { onPick: (value: string) => void; onClose?: () => void }) {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const customEmoji = useCustomEmoji();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState(EMOJI_CATEGORIES[0].id);
@@ -39,9 +41,9 @@ export function EmojiPicker({ onPick, onClose }: { onPick: (value: string) => vo
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search emoji"
+          placeholder={t("emoji.search")}
           autoFocus
-          aria-label="Search emoji"
+          aria-label={t("emoji.search")}
         />
       </div>
 
@@ -63,7 +65,7 @@ export function EmojiPicker({ onPick, onClose }: { onPick: (value: string) => vo
             ))}
           </div>
           <div className="emoji-section">
-            <h4>Frequently used</h4>
+            <h4>{t("emoji.frequentlyUsed")}</h4>
             <div className="emoji-grid">
               {frequent.map((entry) => {
                 const custom = /^:([a-z0-9_+-]+):$/i.exec(entry);
@@ -92,7 +94,7 @@ export function EmojiPicker({ onPick, onClose }: { onPick: (value: string) => vo
       <div className="emoji-scroll">
         {customMatches.length > 0 ? (
           <div className="emoji-section">
-            <h4>Custom</h4>
+            <h4>{t("emoji.custom")}</h4>
             <div className="emoji-grid">
               {customMatches.map(([name, url]) => (
                 <button key={name} type="button" title={`:${name}:`} onClick={() => pick(`:${name}:`)}>
@@ -105,7 +107,7 @@ export function EmojiPicker({ onPick, onClose }: { onPick: (value: string) => vo
         ) : null}
 
         <div className="emoji-section">
-          <h4>{query ? "Results" : active.label}</h4>
+          <h4>{query ? t("emoji.results") : active.label}</h4>
           <div className="emoji-grid">
             {(query ? results : active.emoji.map(([name, char]) => [name, char] as [string, string])).map(
               ([name, char]) => (
@@ -120,21 +122,21 @@ export function EmojiPicker({ onPick, onClose }: { onPick: (value: string) => vo
               )
             )}
             {query && results.length === 0 && customMatches.length === 0 ? (
-              <p className="emoji-empty">No emoji found</p>
+              <p className="emoji-empty">{t("emoji.noneFound")}</p>
             ) : null}
           </div>
         </div>
       </div>
 
       <footer className="emoji-footer">
-        <span>Skin tone</span>
+        <span>{t("emoji.skinTone")}</span>
         <div className="skin-tones">
           {[0, 1, 2, 3, 4, 5].map((tone) => (
             <button
               key={tone}
               type="button"
               className={tone === skinTone ? "is-active" : ""}
-              aria-label={`Skin tone ${tone + 1}`}
+              aria-label={t("emoji.skinToneOption", { number: tone + 1 })}
               onClick={() => void actions.updatePreferences({ skinTone: tone })}
             >
               {applySkinTone("👍", tone)}

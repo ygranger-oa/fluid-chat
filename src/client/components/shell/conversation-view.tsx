@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { BookmarkDto } from "@/shared/types";
 import { api } from "../../api";
+import { useI18n } from "../../i18n";
 import { conversationTitle, useApp, useDirectory } from "../../store";
 import { Avatar, IconButton, MenuDivider, MenuItem, Popover } from "../ui/primitives";
 import { Composer } from "../message/composer";
@@ -24,6 +25,7 @@ import { MessageList } from "../message/message-list";
 
 export function ConversationView({ conversationId }: { conversationId: string }) {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const directory = useDirectory();
   const conversation = state.bootstrap?.conversations.find((entry) => entry.id === conversationId);
   const channel = conversation?.channel;
@@ -47,7 +49,7 @@ export function ConversationView({ conversationId }: { conversationId: string })
   if (!conversation) {
     return (
       <section className="conversation">
-        <div className="conversation-empty">This conversation is no longer available.</div>
+        <div className="conversation-empty">{t("conversation.unavailable")}</div>
       </section>
     );
   }
@@ -75,7 +77,7 @@ export function ConversationView({ conversationId }: { conversationId: string })
           <button
             type="button"
             className={`star-toggle ${conversation.membership?.starred ? "is-on" : ""}`}
-            aria-label={conversation.membership?.starred ? "Unstar conversation" : "Star conversation"}
+            aria-label={conversation.membership?.starred ? t("conversation.unstar") : t("conversation.star")}
             onClick={async () => {
               await api.conversations.updateMembership(conversationId, { starred: !conversation.membership?.starred });
               await actions.refreshConversations();
@@ -97,7 +99,7 @@ export function ConversationView({ conversationId }: { conversationId: string })
               className="conversation-topic is-empty"
               onClick={() => actions.setRightPanel({ kind: "details", conversationId })}
             >
-              Add a topic
+              {t("conversation.addTopic")}
             </button>
           ) : null}
         </div>
@@ -107,7 +109,7 @@ export function ConversationView({ conversationId }: { conversationId: string })
             type="button"
             className="member-facepile"
             onClick={() => actions.setRightPanel({ kind: "details", conversationId })}
-            aria-label={`${conversation.memberIds.length} members`}
+            aria-label={t("conversation.memberCount", { count: conversation.memberIds.length })}
           >
             {memberAvatars.map((id) => (
               <Avatar key={id} user={directory.get(id)} size={22} presence={false} />
@@ -115,9 +117,9 @@ export function ConversationView({ conversationId }: { conversationId: string })
             <span>{conversation.memberIds.length}</span>
           </button>
 
-          <label className="jump-date" title="Jump to a date">
+          <label className="jump-date" title={t("conversation.jumpDate")}>
             <CalendarDays size={17} />
-            <span className="sr-only">Jump to a date</span>
+            <span className="sr-only">{t("conversation.jumpDate")}</span>
             <input
               type="date"
               onChange={(event) => {
@@ -126,14 +128,14 @@ export function ConversationView({ conversationId }: { conversationId: string })
             />
           </label>
 
-          <IconButton label="Pinned messages" onClick={() => actions.setRightPanel({ kind: "pins", conversationId })}>
+          <IconButton label={t("conversation.pinnedMessages")} onClick={() => actions.setRightPanel({ kind: "pins", conversationId })}>
             <Pin size={17} />
           </IconButton>
-          <IconButton label="Files" onClick={() => actions.setRightPanel({ kind: "files", conversationId })}>
+          <IconButton label={t("common.files")} onClick={() => actions.setRightPanel({ kind: "files", conversationId })}>
             <FileText size={17} />
           </IconButton>
           <IconButton
-            label={conversation.membership?.muted ? "Unmute conversation" : "Mute conversation"}
+            label={conversation.membership?.muted ? t("conversation.unmute") : t("conversation.mute")}
             onClick={async () => {
               await api.conversations.updateMembership(conversationId, { muted: !conversation.membership?.muted });
               await actions.refreshConversations();
@@ -142,11 +144,11 @@ export function ConversationView({ conversationId }: { conversationId: string })
             {conversation.membership?.muted ? <BellOff size={17} /> : <Bell size={17} />}
           </IconButton>
           {channel ? (
-            <IconButton label="Add people" onClick={() => actions.setModal({ kind: "add-people", conversationId })}>
+            <IconButton label={t("conversation.addPeople")} onClick={() => actions.setModal({ kind: "add-people", conversationId })}>
               <UserPlus size={17} />
             </IconButton>
           ) : null}
-          <IconButton label="Conversation details" onClick={() => actions.setRightPanel({ kind: "details", conversationId })}>
+          <IconButton label={t("conversation.details")} onClick={() => actions.setRightPanel({ kind: "details", conversationId })}>
             <Info size={17} />
           </IconButton>
         </div>
@@ -164,7 +166,7 @@ export function ConversationView({ conversationId }: { conversationId: string })
             width={320}
             trigger={({ toggle, ref }) => (
               <button type="button" className="bookmark add" ref={ref} onClick={toggle}>
-                <Plus size={13} /> Add a bookmark
+                <Plus size={13} /> {t("conversation.addBookmark")}
               </button>
             )}
           >
@@ -187,15 +189,15 @@ export function ConversationView({ conversationId }: { conversationId: string })
                 }}
               >
                 <label>
-                  Title
-                  <input name="title" required maxLength={120} placeholder="Runbook" />
+                  {t("common.title")}
+                  <input name="title" required maxLength={120} placeholder={t("conversation.runbook")} />
                 </label>
                 <label>
-                  Link
+                  {t("common.link")}
                   <input name="url" type="url" required placeholder="https://" />
                 </label>
                 <button className="button primary" type="submit">
-                  Add bookmark
+                  {t("conversation.addBookmarkSubmit")}
                 </button>
               </form>
             )}
@@ -207,7 +209,7 @@ export function ConversationView({ conversationId }: { conversationId: string })
 
       {channel?.archivedAt ? (
         <div className="composer-locked">
-          This channel is archived. It is read-only.
+          {t("conversation.archivedReadOnly")}
           {state.bootstrap?.role !== "member" ? (
             <button
               type="button"
@@ -217,13 +219,13 @@ export function ConversationView({ conversationId }: { conversationId: string })
                 await actions.refreshBootstrap();
               }}
             >
-              Unarchive
+              {t("conversation.unarchive")}
             </button>
           ) : null}
         </div>
       ) : !joined && channel ? (
         <div className="composer-locked">
-          You are previewing #{channel.name}.
+          {t("conversation.previewing", { channel: channel.name })}
           <button
             type="button"
             className="button primary"
@@ -237,13 +239,13 @@ export function ConversationView({ conversationId }: { conversationId: string })
               }
             }}
           >
-            Join channel
+            {t("conversation.joinChannel")}
           </button>
         </div>
       ) : (
         <Composer
           conversationId={conversationId}
-          placeholder={channel ? `Message #${channel.name}` : `Message ${title}`}
+          placeholder={channel ? t("conversation.messageChannel", { channel: channel.name }) : t("conversation.messageConversation", { title })}
         />
       )}
     </section>
@@ -252,11 +254,12 @@ export function ConversationView({ conversationId }: { conversationId: string })
 
 export function ConversationMenuItems({ conversationId }: { conversationId: string }) {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const conversation = state.bootstrap?.conversations.find((entry) => entry.id === conversationId);
   if (!conversation) return null;
   return (
     <>
-      <MenuItem onClick={() => actions.setRightPanel({ kind: "details", conversationId })}>Open details</MenuItem>
+      <MenuItem onClick={() => actions.setRightPanel({ kind: "details", conversationId })}>{t("conversation.openDetails")}</MenuItem>
       <MenuDivider />
       <MenuItem
         onClick={async () => {
@@ -266,7 +269,9 @@ export function ConversationMenuItems({ conversationId }: { conversationId: stri
           await actions.refreshConversations();
         }}
       >
-        Notify me about {conversation.membership?.notificationLevel === "all" ? "mentions only" : "every message"}
+        {t("conversation.notifyAbout", {
+          level: conversation.membership?.notificationLevel === "all" ? t("conversation.mentionsOnlyLower") : t("conversation.everyMessageLower")
+        })}
       </MenuItem>
     </>
   );

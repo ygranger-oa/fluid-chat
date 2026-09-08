@@ -46,7 +46,7 @@ curl -s localhost:3000/api/meta/openapi.json > openapi.json
 | Method | Path | Scope | Notes |
 | --- | --- | --- | --- |
 | PATCH | `/users/me` | `users:write` | Name, handle, title, pronouns, phone, timezone, avatar |
-| PATCH | `/users/me/preferences` | `users:write` | Theme, density, notifications, keywords, skin tone |
+| PATCH | `/users/me/preferences` | `users:write` | Theme, language, density, notifications, keywords, skin tone |
 | PUT | `/users/me/status` | `users:write` | Emoji, text, optional expiry |
 | PUT | `/users/me/presence` | `users:write` | `active` / `away` / `dnd` / `offline` (+ `dndUntil`) |
 | POST | `/users/me/heartbeat` | `users:write` | Keeps presence fresh; called by the client every minute |
@@ -55,6 +55,10 @@ curl -s localhost:3000/api/meta/openapi.json > openapi.json
 
 `/users/me*` addresses the key's own identity: for a bot key that is the bot, so a key can set its
 own status and presence without touching the admin who created it.
+
+`/users/me/preferences.language` accepts `system`, `en` or `fr`. `system` keeps the web client on
+browser-language detection (`navigator.languages` / `navigator.language`) with English as the
+fallback when no supported language matches.
 
 ## Workspaces
 

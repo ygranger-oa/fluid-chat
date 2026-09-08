@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Smile } from "lucide-react";
 import type { MessageDto, ReactionSummary } from "@/shared/types";
 import { emojiLabel, reactionShortcuts, rememberEmoji } from "../../emoji";
+import { useI18n } from "../../i18n";
 import { useApp } from "../../store";
 import { Popover } from "../ui/primitives";
 import { EmojiPicker } from "../ui/emoji-picker";
@@ -17,19 +18,20 @@ const NAMES_SHOWN = 8;
  * Reads the reactor list the way a person would say it: you first, then who
  * else, then what they reacted with.
  */
-function reactorNames(reaction: ReactionSummary, viewerId: string | undefined) {
+function reactorNames(reaction: ReactionSummary, viewerId: string | undefined, t: ReturnType<typeof useI18n>["t"]) {
   const others = reaction.users.filter((user) => user.id !== viewerId).map((user) => user.displayName);
-  const names = reaction.reacted ? ["You", ...others] : others;
+  const names = reaction.reacted ? [t("emoji.you"), ...others] : others;
   const hidden = names.length - NAMES_SHOWN;
   const shown = hidden > 0 ? names.slice(0, NAMES_SHOWN) : names;
-  if (hidden > 0) shown.push(`${hidden} other${hidden === 1 ? "" : "s"}`);
+  if (hidden > 0) shown.push(hidden === 1 ? t("emoji.other", { count: hidden }) : t("emoji.others", { count: hidden }));
   if (shown.length === 0) return "";
   if (shown.length === 1) return shown[0];
-  return `${shown.slice(0, -1).join(", ")} and ${shown[shown.length - 1]}`;
+  return t("emoji.namesJoin", { names: shown.slice(0, -1).join(", "), last: shown[shown.length - 1] });
 }
 
 export function MessageReactions({ message }: { message: MessageDto }) {
   const { actions } = useApp();
+  const { t } = useI18n();
   if (message.reactions.length === 0) return null;
 
   return (
@@ -47,7 +49,7 @@ export function MessageReactions({ message }: { message: MessageDto }) {
       <Popover
         width={340}
         trigger={({ toggle, ref }) => (
-          <button type="button" className="reaction add-reaction" onClick={toggle} ref={ref} aria-label="Add reaction">
+          <button type="button" className="reaction add-reaction" onClick={toggle} ref={ref} aria-label={t("emoji.addReaction")}>
             <Smile size={14} />
           </button>
         )}
@@ -60,6 +62,7 @@ export function MessageReactions({ message }: { message: MessageDto }) {
 
 function ReactionChip({ reaction, onToggle }: { reaction: ReactionSummary; onToggle: () => void }) {
   const { state } = useApp();
+  const { t } = useI18n();
   const [hovered, setHovered] = useState(false);
   const ref = useRef<HTMLButtonElement>(null);
 
@@ -77,10 +80,10 @@ function ReactionChip({ reaction, onToggle }: { reaction: ReactionSummary; onTog
     };
   }, [hovered]);
 
-  const names = reactorNames(reaction, state.session?.id);
+  const names = reactorNames(reaction, state.session?.id, t);
   const label = emojiLabel(reaction.emoji);
   // Screen readers get the same sentence the hover card shows.
-  const description = `${names} reacted with ${label}`;
+  const description = t("emoji.reactedWith", { names, label });
 
   return (
     <>

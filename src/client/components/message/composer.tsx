@@ -33,6 +33,7 @@ import { api } from "../../api";
 import { track } from "../../analytics";
 import { searchEmoji } from "../../emoji";
 import { formatBytes } from "../../format";
+import { useI18n } from "../../i18n";
 import { useApp, useCustomEmoji, useDirectory, useMentionDirectory } from "../../store";
 import { Avatar, IconButton, Popover } from "../ui/primitives";
 import { EmojiPicker } from "../ui/emoji-picker";
@@ -53,6 +54,7 @@ export function Composer({
   onSent?: () => void;
 }) {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const directory = useDirectory();
   const mentions = useMentionDirectory();
   const customEmoji = useCustomEmoji();
@@ -155,7 +157,7 @@ export function Composer({
         .map((group) => ({
           id: group.id,
           label: `@${group.handle}`,
-          hint: `${group.memberIds.length} people`,
+          hint: t("composer.groupPeopleHint", { count: group.memberIds.length }),
           insert: `@${group.handle} `
         }));
       const broadcasts = ["here", "channel", "everyone"]
@@ -163,7 +165,7 @@ export function Composer({
         .map((name) => ({
           id: name,
           label: `@${name}`,
-          hint: name === "here" ? "Notify people who are active" : "Notify everyone in this conversation",
+          hint: name === "here" ? t("composer.notifyActive") : t("composer.notifyEveryone"),
           insert: `@${name} `
         }));
       return [...people, ...groups, ...broadcasts];
@@ -200,7 +202,7 @@ export function Composer({
       .filter((command) => !query || command.name.startsWith(query))
       .slice(0, 8)
       .map((command) => ({ id: command.name, label: command.usage, hint: command.description, insert: `/${command.name} ` }));
-  }, [caret, commands, customEmoji, dismissedAt, state.bootstrap, state.session?.id, trigger]);
+  }, [caret, commands, customEmoji, dismissedAt, state.bootstrap, state.session?.id, t, trigger]);
 
   useEffect(() => setSuggestionIndex(0), [suggestions.length]);
 
@@ -234,7 +236,7 @@ export function Composer({
     if (!element) return;
     const start = element.selectionStart;
     const end = element.selectionEnd;
-    const selected = text.slice(start, end) || "text";
+    const selected = text.slice(start, end) || t("composer.textFallback");
     const next = `${text.slice(0, start)}${before}${selected}${after}${text.slice(end)}`;
     replaceText(next, start + before.length, start + before.length + selected.length);
   };
@@ -400,32 +402,32 @@ export function Composer({
 
       <div className="composer-box">
         <div className="composer-toolbar">
-          <IconButton label="Bold" onClick={() => wrapSelection("*")}>
+          <IconButton label={t("composer.bold")} onClick={() => wrapSelection("*")}>
             <Bold size={15} />
           </IconButton>
-          <IconButton label="Italic" onClick={() => wrapSelection("_")}>
+          <IconButton label={t("composer.italic")} onClick={() => wrapSelection("_")}>
             <Italic size={15} />
           </IconButton>
-          <IconButton label="Strikethrough" onClick={() => wrapSelection("~")}>
+          <IconButton label={t("composer.strikethrough")} onClick={() => wrapSelection("~")}>
             <Strikethrough size={15} />
           </IconButton>
           <span className="toolbar-divider" />
-          <IconButton label="Link" onClick={() => wrapSelection("<", "|label>")}>
+          <IconButton label={t("composer.link")} onClick={() => wrapSelection("<", "|label>")}>
             <Link2 size={15} />
           </IconButton>
-          <IconButton label="Ordered list" onClick={() => prefixLines("1. ")}>
+          <IconButton label={t("composer.orderedList")} onClick={() => prefixLines("1. ")}>
             <ListOrdered size={15} />
           </IconButton>
-          <IconButton label="Bulleted list" onClick={() => prefixLines("- ")}>
+          <IconButton label={t("composer.bulletedList")} onClick={() => prefixLines("- ")}>
             <List size={15} />
           </IconButton>
-          <IconButton label="Blockquote" onClick={() => prefixLines("> ")}>
+          <IconButton label={t("composer.blockquote")} onClick={() => prefixLines("> ")}>
             <Quote size={15} />
           </IconButton>
-          <IconButton label="Inline code" onClick={() => wrapSelection("`")}>
+          <IconButton label={t("composer.inlineCode")} onClick={() => wrapSelection("`")}>
             <Code size={15} />
           </IconButton>
-          <IconButton label="Code block" onClick={() => wrapSelection("```\n", "\n```")}>
+          <IconButton label={t("composer.codeBlock")} onClick={() => wrapSelection("```\n", "\n```")}>
             <CodeSquare size={15} />
           </IconButton>
         </div>
@@ -459,7 +461,7 @@ export function Composer({
                 </span>
                 <button
                   type="button"
-                  aria-label={`Remove ${file.name}`}
+                  aria-label={t("composer.removeFile", { name: file.name })}
                   onClick={() => {
                     setAttachments((current) => current.filter((entry) => entry.id !== file.id));
                     void api.files.remove(file.id).catch(() => undefined);
@@ -469,7 +471,7 @@ export function Composer({
                 </button>
               </div>
             ))}
-            {uploading ? <span className="uploading">Uploading…</span> : null}
+            {uploading ? <span className="uploading">{t("composer.uploading")}</span> : null}
           </div>
         ) : null}
 
@@ -482,13 +484,13 @@ export function Composer({
               hidden
               onChange={(event) => event.target.files && void uploadFiles(event.target.files)}
             />
-            <IconButton label="Attach file" onClick={() => fileInputRef.current?.click()}>
+            <IconButton label={t("composer.attachFile")} onClick={() => fileInputRef.current?.click()}>
               <Paperclip size={17} />
             </IconButton>
             <Popover
               width={340}
               trigger={({ toggle, ref }) => (
-                <button type="button" className="icon-button" ref={ref} onClick={toggle} aria-label="Emoji">
+                <button type="button" className="icon-button" ref={ref} onClick={toggle} aria-label={t("composer.emoji")}>
                   <Smile size={17} />
                 </button>
               )}
@@ -506,14 +508,14 @@ export function Composer({
             {parentMessageId ? (
               <label className="broadcast-toggle">
                 <input type="checkbox" checked={broadcast} onChange={(event) => setBroadcast(event.target.checked)} />
-                Also send to {conversation?.channel ? `#${conversation.channel.name}` : "conversation"}
+                {t("composer.alsoSendTo", { target: conversation?.channel ? `#${conversation.channel.name}` : t("app.conversation") })}
               </label>
             ) : null}
           </div>
 
           <div className="composer-right">
             <IconButton
-              label="Schedule for later"
+              label={t("composer.scheduleLater")}
               onClick={() =>
                 actions.setModal({
                   kind: "schedule",
@@ -532,13 +534,13 @@ export function Composer({
               onClick={() => void send()}
               disabled={!text.trim() && attachments.length === 0}
             >
-              <Send size={15} /> Send
+              <Send size={15} /> {t("composer.send")}
             </button>
           </div>
         </div>
       </div>
       <p className="composer-hint">
-        {enterToSend ? "Enter to send · Shift+Enter for a new line" : "Cmd+Enter to send"} · Type / for commands
+        {enterToSend ? t("composer.hintEnter") : t("composer.hintCmd")} - {t("composer.hintCommands")}
       </p>
     </div>
   );

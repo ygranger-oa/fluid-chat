@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { notificationsPaused } from "@/shared/quiet-hours";
 import { ALERTING_NOTIFICATION_TYPES, AppProvider, useApp } from "../store";
+import { I18nProvider, useI18n } from "../i18n";
 import { AuthScreen, WorkspaceSetupScreen } from "./auth-screen";
 import { Sidebar } from "./shell/sidebar";
 import { WorkspaceRail } from "./shell/workspace-rail";
@@ -52,41 +53,67 @@ function AppRoot() {
     );
   }
 
-  if (state.status === "anonymous" || !state.session) return <AuthScreen />;
-  if (state.memberships.length === 0) return <WorkspaceSetupScreen />;
+  if (state.status === "anonymous" || !state.session) {
+    return (
+      <I18nProvider preferences={null}>
+        <LanguageEffect />
+        <AuthScreen />
+      </I18nProvider>
+    );
+  }
+  if (state.memberships.length === 0) {
+    return (
+      <I18nProvider preferences={state.session.preferences}>
+        <LanguageEffect />
+        <WorkspaceSetupScreen />
+      </I18nProvider>
+    );
+  }
 
   return (
-    <div className={`app-shell ${state.sidebarOpen ? "sidebar-open" : ""}`}>
-      <TopBar />
-      <div className="app-body">
-        <WorkspaceRail />
-        <Sidebar />
-        {state.sidebarOpen ? (
-          <button
-            type="button"
-            className="sidebar-scrim"
-            aria-label="Close navigation"
-            onClick={() => actions.setSidebarOpen(false)}
-          />
-        ) : null}
-        <main className="app-main">
-          {state.view.kind === "conversation" ? <ConversationView conversationId={state.view.conversationId} /> : null}
-          {state.view.kind === "activity" ? <ActivityView /> : null}
-          {state.view.kind === "threads" ? <ThreadsView /> : null}
-          {state.view.kind === "saved" ? <SavedView /> : null}
-          {state.view.kind === "drafts" ? <DraftsView /> : null}
-          {state.view.kind === "unreads" ? <UnreadsView /> : null}
-          {state.view.kind === "browse" ? <BrowseChannelsView /> : null}
-          {state.view.kind === "people" ? <PeopleView /> : null}
-          {state.view.kind === "files" ? <FilesView /> : null}
-          {state.view.kind === "search" ? <SearchView query={state.view.query} /> : null}
-        </main>
-        <RightPanel />
+    <I18nProvider preferences={state.session.preferences}>
+      <LanguageEffect />
+      <div className={`app-shell ${state.sidebarOpen ? "sidebar-open" : ""}`}>
+        <TopBar />
+        <div className="app-body">
+          <WorkspaceRail />
+          <Sidebar />
+          {state.sidebarOpen ? (
+            <SidebarScrim />
+          ) : null}
+          <main className="app-main">
+            {state.view.kind === "conversation" ? <ConversationView conversationId={state.view.conversationId} /> : null}
+            {state.view.kind === "activity" ? <ActivityView /> : null}
+            {state.view.kind === "threads" ? <ThreadsView /> : null}
+            {state.view.kind === "saved" ? <SavedView /> : null}
+            {state.view.kind === "drafts" ? <DraftsView /> : null}
+            {state.view.kind === "unreads" ? <UnreadsView /> : null}
+            {state.view.kind === "browse" ? <BrowseChannelsView /> : null}
+            {state.view.kind === "people" ? <PeopleView /> : null}
+            {state.view.kind === "files" ? <FilesView /> : null}
+            {state.view.kind === "search" ? <SearchView query={state.view.query} /> : null}
+          </main>
+          <RightPanel />
+        </div>
+        <Modals />
+        <Toasts />
       </div>
-      <Modals />
-      <Toasts />
-    </div>
+    </I18nProvider>
   );
+}
+
+function SidebarScrim() {
+  const { actions } = useApp();
+  const { t } = useI18n();
+  return <button type="button" className="sidebar-scrim" aria-label={t("app.closeNavigation")} onClick={() => actions.setSidebarOpen(false)} />;
+}
+
+function LanguageEffect() {
+  const { language } = useI18n();
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+  return null;
 }
 
 function Modals() {

@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import { useI18n } from "../../i18n";
 import { useApp } from "../../store";
 
 /**
@@ -9,10 +10,11 @@ import { useApp } from "../../store";
  */
 export function WorkspaceRail() {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   if (state.memberships.length === 0) return null;
 
   return (
-    <nav className="workspace-rail" aria-label="Workspaces">
+    <nav className="workspace-rail" aria-label={t("workspaceRail.workspaces")}>
       {state.memberships.map((membership) => {
         const active = membership.workspace.id === state.workspaceId;
         const label = membership.workspace.name;
@@ -39,14 +41,14 @@ export function WorkspaceRail() {
       <button
         type="button"
         className="rail-tile rail-add"
-        title="Create a workspace"
-        aria-label="Create a workspace"
+        title={t("workspaceRail.createWorkspace")}
+        aria-label={t("workspaceRail.createWorkspace")}
         onClick={() => actions.setModal({ kind: "create-workspace" })}
       >
         <span className="rail-badge" aria-hidden>
           <Plus size={18} />
         </span>
-        <span className="rail-name">Add</span>
+        <span className="rail-name">{t("workspaceRail.add")}</span>
       </button>
     </nav>
   );

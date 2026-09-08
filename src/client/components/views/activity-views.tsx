@@ -5,6 +5,7 @@ import { AtSign, Bell, Bookmark, Clock, Inbox, MessageSquare, PenSquare, Trash2 
 import type { DraftDto, MessageDto, NotificationDto, ReminderDto, ScheduledMessageDto } from "@/shared/types";
 import { api } from "../../api";
 import { formatRelative, compactTimestamp } from "../../format";
+import { useI18n } from "../../i18n";
 import { conversationTitle, useApp, useDirectory } from "../../store";
 import { Avatar, EmptyState, Spinner } from "../ui/primitives";
 import { MessageItem } from "../message/message-item";
@@ -24,11 +25,12 @@ function ViewHeader({ title, subtitle, action }: { title: string; subtitle?: str
 
 export function useConversationLabel() {
   const { state } = useApp();
+  const { t } = useI18n();
   const directory = useDirectory();
   return (conversationId: string | null) => {
     if (!conversationId) return "";
     const conversation = state.bootstrap?.conversations.find((entry) => entry.id === conversationId);
-    if (!conversation) return "a conversation";
+    if (!conversation) return t("app.aConversation");
     return conversation.channel
       ? `#${conversation.channel.name}`
       : conversationTitle(conversation, directory, state.session?.id);
@@ -37,6 +39,7 @@ export function useConversationLabel() {
 
 export function ActivityView() {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const directory = useDirectory();
   const label = useConversationLabel();
   const [notifications, setNotifications] = useState<NotificationDto[] | null>(null);
@@ -55,8 +58,8 @@ export function ActivityView() {
   return (
     <section className="view">
       <ViewHeader
-        title="Activity"
-        subtitle="Mentions, replies and reactions"
+        title={t("views.activityTitle")}
+        subtitle={t("views.activitySubtitle")}
         action={
           <button
             type="button"
@@ -70,17 +73,17 @@ export function ActivityView() {
               );
             }}
           >
-            Mark all read
+            {t("views.markAllRead")}
           </button>
         }
       />
       <div className="view-filters">
         {(
           [
-            ["all", "All", <Bell key="a" size={14} />],
-            ["mention", "Mentions", <AtSign key="b" size={14} />],
-            ["thread_reply", "Threads", <MessageSquare key="c" size={14} />],
-            ["reaction", "Reactions", <Bookmark key="d" size={14} />]
+            ["all", t("common.all"), <Bell key="a" size={14} />],
+            ["mention", t("views.mentions"), <AtSign key="b" size={14} />],
+            ["thread_reply", t("views.threads"), <MessageSquare key="c" size={14} />],
+            ["reaction", t("views.reactions"), <Bookmark key="d" size={14} />]
           ] as const
         ).map(([value, text, icon]) => (
           <button
@@ -97,9 +100,9 @@ export function ActivityView() {
 
       <div className="view-scroll">
         {!notifications ? (
-          <Spinner label="Loading activity" />
+          <Spinner label={t("views.loadingActivity")} />
         ) : visible.length === 0 ? (
-          <EmptyState title="You are all caught up" body="Mentions, thread replies and reactions land here." />
+          <EmptyState title={t("views.caughtUp")} body={t("views.activityEmpty")} />
         ) : (
           visible.map((notification) => {
             const actor = notification.actorUserId ? directory.get(notification.actorUserId) : undefined;
@@ -115,8 +118,8 @@ export function ActivityView() {
                 <Avatar user={actor} size={34} />
                 <div>
                   <div className="activity-meta">
-                    <strong>{actor?.displayName ?? "Fluid Chat"}</strong>
-                    <span>{describeNotification(notification.type)}</span>
+                    <strong>{actor?.displayName ?? t("app.fluidFallback")}</strong>
+                    <span>{describeNotification(notification.type, t)}</span>
                     <span className="muted">{label(notification.conversationId)}</span>
                     <time>{formatRelative(notification.createdAt)}</time>
                   </div>
@@ -131,24 +134,24 @@ export function ActivityView() {
   );
 }
 
-function describeNotification(type: string) {
+function describeNotification(type: string, t: ReturnType<typeof useI18n>["t"]) {
   switch (type) {
     case "mention":
-      return "mentioned you in";
+      return t("views.mentionedYouIn");
     case "dm":
-      return "sent you a message";
+      return t("views.sentMessage");
     case "thread_reply":
-      return "replied in a thread in";
+      return t("views.repliedThread");
     case "reaction":
-      return "reacted to your message in";
+      return t("views.reactedMessage");
     case "invite_accepted":
-      return "joined the workspace";
+      return t("views.joinedWorkspace");
     case "reminder":
-      return "reminder";
+      return t("views.reminder");
     case "keyword":
-      return "said a keyword you follow in";
+      return t("views.saidKeyword");
     case "channel_invite":
-      return "added you to a channel";
+      return t("views.addedChannel");
     default:
       return type;
   }
@@ -156,6 +159,7 @@ function describeNotification(type: string) {
 
 export function ThreadsView() {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const label = useConversationLabel();
   const [threads, setThreads] = useState<Array<{ root: MessageDto; replies: MessageDto[] }> | null>(null);
 
@@ -169,19 +173,19 @@ export function ThreadsView() {
 
   return (
     <section className="view">
-      <ViewHeader title="Threads" subtitle="Conversations you are part of" />
+      <ViewHeader title={t("views.threads")} subtitle={t("views.threadsSubtitle")} />
       <div className="view-scroll">
         {!threads ? (
-          <Spinner label="Loading threads" />
+          <Spinner label={t("views.loadingThreads")} />
         ) : threads.length === 0 ? (
-          <EmptyState title="No threads yet" body="Reply to a message in a thread and it shows up here." />
+          <EmptyState title={t("views.noThreads")} body={t("views.noThreadsBody")} />
         ) : (
           threads.map(({ root, replies }) => (
             <div key={root.id} className="thread-card">
               <button type="button" className="thread-card-head" onClick={() => void actions.openThread(root.id)}>
                 {label(root.conversationId)}
                 <span>
-                  {root.thread.replyCount} {root.thread.replyCount === 1 ? "reply" : "replies"}
+                  {root.thread.replyCount} {root.thread.replyCount === 1 ? t("views.reply") : t("views.replies")}
                 </span>
               </button>
               <MessageItem message={root} context="list" />
@@ -189,7 +193,7 @@ export function ThreadsView() {
                 <MessageItem key={reply.id} message={reply} context="list" />
               ))}
               <button type="button" className="button ghost" onClick={() => void actions.openThread(root.id)}>
-                Open thread
+                {t("views.openThread")}
               </button>
             </div>
           ))
@@ -201,6 +205,7 @@ export function ThreadsView() {
 
 export function SavedView() {
   const { state } = useApp();
+  const { t } = useI18n();
   const [saved, setSaved] = useState<Array<{ message: MessageDto; savedAt: string }> | null>(null);
 
   useEffect(() => {
@@ -213,17 +218,17 @@ export function SavedView() {
 
   return (
     <section className="view">
-      <ViewHeader title="Later" subtitle="Messages you saved" />
+      <ViewHeader title={t("sidebar.later")} subtitle={t("views.laterSubtitle")} />
       <div className="view-scroll">
         {!saved ? (
-          <Spinner label="Loading saved items" />
+          <Spinner label={t("views.loadingSaved")} />
         ) : saved.length === 0 ? (
-          <EmptyState title="Nothing saved" body="Use the bookmark action on a message to keep it here." />
+          <EmptyState title={t("views.nothingSaved")} body={t("views.nothingSavedBody")} />
         ) : (
           saved.map(({ message, savedAt }) => (
             <div key={message.id} className="panel-card">
               <div className="panel-card-head">
-                <Bookmark size={13} /> Saved {formatRelative(savedAt)}
+                <Bookmark size={13} /> {t("views.saved", { time: formatRelative(savedAt) })}
               </div>
               <MessageItem message={message} context="list" />
             </div>
@@ -236,6 +241,7 @@ export function SavedView() {
 
 export function DraftsView() {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const label = useConversationLabel();
   const [drafts, setDrafts] = useState<DraftDto[] | null>(null);
   const [scheduled, setScheduled] = useState<ScheduledMessageDto[]>([]);
@@ -252,15 +258,15 @@ export function DraftsView() {
 
   return (
     <section className="view">
-      <ViewHeader title="Drafts & sent" subtitle="Unsent drafts, scheduled messages and reminders" />
+      <ViewHeader title={t("sidebar.draftsSent")} subtitle={t("views.draftsSubtitle")} />
       <div className="view-scroll">
         <h3 className="view-subhead">
-          <PenSquare size={14} /> Drafts
+          <PenSquare size={14} /> {t("views.drafts")}
         </h3>
         {!drafts ? (
-          <Spinner label="Loading drafts" />
+          <Spinner label={t("views.loadingDrafts")} />
         ) : drafts.filter((draft) => draft.bodyText.trim()).length === 0 ? (
-          <EmptyState title="No drafts" body="Messages you start but do not send are kept here." />
+          <EmptyState title={t("views.noDrafts")} body={t("views.noDraftsBody")} />
         ) : (
           drafts
             .filter((draft) => draft.bodyText.trim())
@@ -281,20 +287,20 @@ export function DraftsView() {
         )}
 
         <h3 className="view-subhead">
-          <Clock size={14} /> Scheduled
+          <Clock size={14} /> {t("views.scheduled")}
         </h3>
         {scheduled.length === 0 ? (
-          <p className="muted padded">Nothing scheduled.</p>
+          <p className="muted padded">{t("views.nothingScheduled")}</p>
         ) : (
           scheduled.map((entry) => (
             <div key={entry.id} className="list-row is-static">
               <div className="list-row-head">
                 <strong>{label(entry.conversationId)}</strong>
-                <time>Sends {compactTimestamp(entry.sendAt)}</time>
+                <time>{t("views.sendsAt", { time: compactTimestamp(entry.sendAt) })}</time>
                 <button
                   type="button"
                   className="icon-button"
-                  aria-label="Cancel scheduled message"
+                  aria-label={t("views.cancelScheduled")}
                   onClick={async () => {
                     await api.activity.cancelScheduled(entry.id);
                     load();
@@ -309,10 +315,10 @@ export function DraftsView() {
         )}
 
         <h3 className="view-subhead">
-          <Bell size={14} /> Reminders
+          <Bell size={14} /> {t("views.reminders")}
         </h3>
         {reminders.length === 0 ? (
-          <p className="muted padded">No reminders set.</p>
+          <p className="muted padded">{t("views.noReminders")}</p>
         ) : (
           reminders.map((reminder) => (
             <div key={reminder.id} className="list-row is-static">
@@ -327,7 +333,7 @@ export function DraftsView() {
                     load();
                   }}
                 >
-                  Complete
+                  {t("views.complete")}
                 </button>
               </div>
             </div>
@@ -340,6 +346,7 @@ export function DraftsView() {
 
 export function UnreadsView() {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const label = useConversationLabel();
   const [unreads, setUnreads] = useState<Array<{ conversationId: string; messages: MessageDto[] }> | null>(null);
 
@@ -356,8 +363,8 @@ export function UnreadsView() {
   return (
     <section className="view">
       <ViewHeader
-        title="All unreads"
-        subtitle="Everything you have not read yet"
+        title={t("sidebar.allUnreads")}
+        subtitle={t("views.unreadsSubtitle")}
         action={
           <button
             type="button"
@@ -370,21 +377,21 @@ export function UnreadsView() {
               load();
             }}
           >
-            <Inbox size={14} /> Mark all read
+            <Inbox size={14} /> {t("views.markAllRead")}
           </button>
         }
       />
       <div className="view-scroll">
         {!unreads ? (
-          <Spinner label="Loading unreads" />
+          <Spinner label={t("views.loadingUnreads")} />
         ) : unreads.length === 0 ? (
-          <EmptyState title="You are all caught up" body="No unread messages anywhere." />
+          <EmptyState title={t("views.caughtUp")} body={t("views.noUnreadMessages")} />
         ) : (
           unreads.map((entry) => (
             <div key={entry.conversationId} className="unread-group">
               <button type="button" className="unread-group-head" onClick={() => void actions.openConversation(entry.conversationId)}>
                 {label(entry.conversationId)}
-                <span>{entry.messages.length} new</span>
+                <span>{t("views.newCount", { count: entry.messages.length })}</span>
               </button>
               {entry.messages.map((message) => (
                 <MessageItem key={message.id} message={message} context="list" />

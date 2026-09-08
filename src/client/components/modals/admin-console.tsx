@@ -6,6 +6,7 @@ import type { ChannelSummary, CustomEmojiDto, PublicUser } from "@/shared/types"
 import { api } from "../../api";
 import type { ApiKeyDto } from "../../api";
 import { formatRelative } from "../../format";
+import { useI18n } from "../../i18n";
 import { useApp } from "../../store";
 import { Avatar, Modal, Spinner } from "../ui/primitives";
 
@@ -26,24 +27,25 @@ type InviteRow = {
 
 export function AdminConsole({ onClose }: { onClose: () => void }) {
   const { state } = useApp();
+  const { t } = useI18n();
   const [tab, setTab] = useState<Tab>("overview");
   const workspaceId = state.workspaceId;
   const isOwner = state.bootstrap?.role === "owner";
 
   return (
-    <Modal title={`${state.bootstrap?.workspace.name ?? "Workspace"} settings`} onClose={onClose} width={860}>
+    <Modal title={t("admin.settingsTitle", { workspace: state.bootstrap?.workspace.name ?? t("app.workspaceFallback") })} onClose={onClose} width={860}>
       <div className="panel-tabs wrap" role="tablist">
         {(
           [
-            ["overview", "Overview"],
-            ["members", "Members"],
-            ["invitations", "Invitations"],
-            ["channels", "Channels"],
-            ["emoji", "Emoji"],
-            ["api", "API keys"],
-            ["settings", "Settings"],
-            ["audit", "Audit log"],
-            ["export", "Export"]
+            ["overview", t("admin.overview")],
+            ["members", t("admin.members")],
+            ["invitations", t("admin.invitations")],
+            ["channels", t("admin.channels")],
+            ["emoji", t("admin.emoji")],
+            ["api", t("admin.apiKeys")],
+            ["settings", t("admin.settings")],
+            ["audit", t("admin.auditLog")],
+            ["export", t("admin.export")]
           ] as Array<[Tab, string]>
         ).map(([value, label]) => (
           <button key={value} type="button" role="tab" aria-selected={tab === value} className={tab === value ? "is-active" : ""} onClick={() => setTab(value)}>
@@ -64,7 +66,7 @@ export function AdminConsole({ onClose }: { onClose: () => void }) {
           {tab === "audit" ? <AuditLog workspaceId={workspaceId} /> : null}
           {tab === "export" ? <Exports workspaceId={workspaceId} isOwner={isOwner} /> : null}
           <p className="admin-note">
-            Signed in as {state.session?.email} · role: {state.bootstrap?.role}
+            {t("admin.signedInAs", { email: state.session?.email ?? "", role: state.bootstrap?.role ?? "" })}
           </p>
         </div>
       )}
@@ -73,6 +75,7 @@ export function AdminConsole({ onClose }: { onClose: () => void }) {
 }
 
 function Overview({ workspaceId }: { workspaceId: string }) {
+  const { t } = useI18n();
   const [usage, setUsage] = useState<{ activeMembers: number; pendingInvites: number; fileCount: number } | null>(null);
   const { state } = useApp();
 
@@ -88,20 +91,20 @@ function Overview({ workspaceId }: { workspaceId: string }) {
   return (
     <div className="admin-grid">
       <div className="stat-card">
-        <span>Members</span>
+        <span>{t("admin.members")}</span>
         <strong>{usage?.activeMembers ?? "—"}</strong>
-        <small>of {workspace?.seatLimit ?? 0} seats</small>
+        <small>{t("admin.seats", { count: workspace?.seatLimit ?? 0 })}</small>
       </div>
       <div className="stat-card">
-        <span>Pending invites</span>
+        <span>{t("admin.pendingInvites")}</span>
         <strong>{usage?.pendingInvites ?? "—"}</strong>
       </div>
       <div className="stat-card">
-        <span>Files</span>
+        <span>{t("common.files")}</span>
         <strong>{usage?.fileCount ?? "—"}</strong>
       </div>
       <div className="stat-card">
-        <span>Plan</span>
+        <span>{t("admin.plan")}</span>
         <strong className="capitalize">{workspace?.plan ?? "free"}</strong>
         <small className="capitalize">{workspace?.subscriptionStatus}</small>
       </div>
@@ -111,6 +114,7 @@ function Overview({ workspaceId }: { workspaceId: string }) {
 
 function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boolean }) {
   const { actions } = useApp();
+  const { t } = useI18n();
   const [members, setMembers] = useState<MemberRow[] | null>(null);
 
   const load = useCallback(() => {
@@ -122,7 +126,7 @@ function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
 
   useEffect(load, [load]);
 
-  if (!members) return <Spinner label="Loading members" />;
+  if (!members) return <Spinner label={t("admin.loadingMembers")} />;
 
   return (
     <div className="admin-list">
@@ -151,10 +155,10 @@ function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
                   }
                 }}
               >
-                <option value="owner">Owner</option>
-                <option value="admin">Admin</option>
-                <option value="member">Member</option>
-                <option value="guest">Guest</option>
+                <option value="owner">{t("admin.owner")}</option>
+                <option value="admin">{t("admin.admin")}</option>
+                <option value="member">{t("admin.member")}</option>
+                <option value="guest">{t("admin.guest")}</option>
               </select>
             ) : (
               <span className="pill capitalize">{member.role}</span>
@@ -164,7 +168,7 @@ function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
                 type="button"
                 className="button ghost"
                 onClick={async () => {
-                  if (!window.confirm(`Remove ${member.user.displayName} from the workspace?`)) return;
+                  if (!window.confirm(t("admin.removeConfirm", { name: member.user.displayName }))) return;
                   try {
                     await api.workspaces.removeMember(workspaceId, member.memberId);
                     load();
@@ -173,7 +177,7 @@ function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
                   }
                 }}
               >
-                Remove
+                {t("admin.remove")}
               </button>
             ) : (
               <button
@@ -188,7 +192,7 @@ function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
                   }
                 }}
               >
-                Reactivate
+                {t("admin.reactivate")}
               </button>
             )}
           </div>
@@ -200,6 +204,7 @@ function Members({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
 
 function Invitations({ workspaceId }: { workspaceId: string }) {
   const { actions } = useApp();
+  const { t } = useI18n();
   const [invites, setInvites] = useState<InviteRow[] | null>(null);
 
   const load = useCallback(() => {
@@ -211,20 +216,20 @@ function Invitations({ workspaceId }: { workspaceId: string }) {
 
   useEffect(load, [load]);
 
-  if (!invites) return <Spinner label="Loading invitations" />;
+  if (!invites) return <Spinner label={t("admin.loadingInvitations")} />;
   const pending = invites.filter((invite) => !invite.acceptedAt && !invite.revokedAt && new Date(invite.expiresAt) > new Date());
 
   return (
     <div className="admin-list">
-      {pending.length === 0 ? <p className="muted">No pending invitations.</p> : null}
+      {pending.length === 0 ? <p className="muted">{t("admin.noPendingInvitations")}</p> : null}
       {pending.map((invite) => (
         <div key={invite.id} className="admin-row">
           <div className="admin-row-main">
             <span>
-              <strong>{invite.email ?? "Shareable invite link"}</strong>
+              <strong>{invite.email ?? t("admin.shareableInviteLink")}</strong>
               <small>
-                {invite.role} · expires {formatRelative(invite.expiresAt)}
-                {invite.maxUses ? ` · ${invite.useCount}/${invite.maxUses} uses` : ""}
+                {invite.role} · {t("admin.expires", { time: formatRelative(invite.expiresAt) })}
+                {invite.maxUses ? ` · ${t("admin.uses", { used: invite.useCount, max: invite.maxUses })}` : ""}
               </small>
             </span>
           </div>
@@ -236,14 +241,14 @@ function Invitations({ workspaceId }: { workspaceId: string }) {
                 try {
                   const { inviteUrl } = await api.invites.resend(invite.id);
                   void navigator.clipboard.writeText(inviteUrl);
-                  actions.toast("New invite link copied to clipboard", "success");
+                  actions.toast(t("admin.newInviteCopied"), "success");
                   load();
                 } catch (error) {
                   actions.fail(error);
                 }
               }}
             >
-              <RefreshCw size={13} /> Resend
+              <RefreshCw size={13} /> {t("admin.resend")}
             </button>
             <button
               type="button"
@@ -253,7 +258,7 @@ function Invitations({ workspaceId }: { workspaceId: string }) {
                 load();
               }}
             >
-              Revoke
+              {t("common.revoke")}
             </button>
           </div>
         </div>
@@ -264,6 +269,7 @@ function Invitations({ workspaceId }: { workspaceId: string }) {
 
 function Channels({ workspaceId }: { workspaceId: string }) {
   const { actions } = useApp();
+  const { t } = useI18n();
   const [channels, setChannels] = useState<Array<ChannelSummary & { conversationId: string }> | null>(null);
 
   const load = useCallback(() => {
@@ -275,7 +281,7 @@ function Channels({ workspaceId }: { workspaceId: string }) {
 
   useEffect(load, [load]);
 
-  if (!channels) return <Spinner label="Loading channels" />;
+  if (!channels) return <Spinner label={t("views.loadingChannels")} />;
 
   return (
     <div className="admin-list">
@@ -286,7 +292,7 @@ function Channels({ workspaceId }: { workspaceId: string }) {
             <span>
               <strong>{channel.name}</strong>
               <small>
-                {channel.memberCount ?? 0} members{channel.archivedAt ? " · archived" : ""}
+                {t("views.membersCount", { count: channel.memberCount ?? 0 })}{channel.archivedAt ? ` · ${t("views.archived")}` : ""}
               </small>
             </span>
           </div>
@@ -301,20 +307,20 @@ function Channels({ workspaceId }: { workspaceId: string }) {
                   await actions.refreshBootstrap();
                 }}
               >
-                Unarchive
+                {t("conversation.unarchive")}
               </button>
             ) : channel.name !== "general" ? (
               <button
                 type="button"
                 className="button ghost"
                 onClick={async () => {
-                  if (!window.confirm(`Archive #${channel.name}?`)) return;
+                  if (!window.confirm(t("panels.archiveConfirm", { channel: channel.name }))) return;
                   await api.channels.archive(channel.id);
                   load();
                   await actions.refreshBootstrap();
                 }}
               >
-                Archive
+                {t("admin.archive")}
               </button>
             ) : null}
           </div>
@@ -326,6 +332,7 @@ function Channels({ workspaceId }: { workspaceId: string }) {
 
 function Emoji({ workspaceId }: { workspaceId: string }) {
   const { actions } = useApp();
+  const { t } = useI18n();
   const [emoji, setEmoji] = useState<CustomEmojiDto[] | null>(null);
   const [name, setName] = useState("");
 
@@ -341,7 +348,7 @@ function Emoji({ workspaceId }: { workspaceId: string }) {
   return (
     <div className="stack-form">
       <label className="field">
-        Add custom emoji
+        {t("admin.addCustomEmoji")}
         <div className="emoji-upload">
           <input value={name} onChange={(event) => setName(event.target.value)} placeholder="party-parrot" />
           <input
@@ -350,7 +357,7 @@ function Emoji({ workspaceId }: { workspaceId: string }) {
             onChange={async (event) => {
               const file = event.target.files?.[0];
               if (!file || !name.trim()) {
-                actions.toast("Name the emoji first", "error");
+                actions.toast(t("admin.nameEmojiFirst"), "error");
                 return;
               }
               try {
@@ -375,7 +382,7 @@ function Emoji({ workspaceId }: { workspaceId: string }) {
             <button
               type="button"
               className="icon-button"
-              aria-label={`Delete :${entry.name}:`}
+              aria-label={t("admin.deleteEmoji", { name: entry.name })}
               onClick={async () => {
                 await api.workspaces.deleteEmoji(entry.id);
                 load();
@@ -386,7 +393,7 @@ function Emoji({ workspaceId }: { workspaceId: string }) {
             </button>
           </div>
         ))}
-        {emoji?.length === 0 ? <p className="muted">No custom emoji yet.</p> : null}
+        {emoji?.length === 0 ? <p className="muted">{t("admin.noCustomEmoji")}</p> : null}
       </div>
     </div>
   );
@@ -396,6 +403,7 @@ const DEFAULT_SCOPES = ["messages:read", "messages:write", "channels:read", "con
 
 function ApiKeys({ workspaceId }: { workspaceId: string }) {
   const { actions } = useApp();
+  const { t } = useI18n();
   const [keys, setKeys] = useState<ApiKeyDto[] | null>(null);
   const [catalogue, setCatalogue] = useState<Array<{ scope: string; summary: string }>>([]);
   const [secret, setSecret] = useState<{ token: string; name: string } | null>(null);
@@ -435,14 +443,12 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
   return (
     <div className="stack-form">
       <p className="muted">
-        An API key calls the same endpoints this app does, so anything a person can do here, a script or an agent can
-        automate. Keys are pinned to this workspace, limited to the scopes you grant and rate limited per key. The full
-        route list lives at <code>/api/meta/routes</code>.
+        {t("admin.apiIntro")} <code>/api/meta/routes</code>.
       </p>
 
       {secret ? (
         <div className="api-key-reveal">
-          <strong>Copy “{secret.name}” now — this is the only time it is shown.</strong>
+          <strong>{t("admin.copyKeyNow", { name: secret.name })}</strong>
           <code>{secret.token}</code>
           <div className="admin-row-actions">
             <button
@@ -450,17 +456,17 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
               className="button primary"
               onClick={() => {
                 void navigator.clipboard.writeText(secret.token);
-                actions.toast("API key copied to clipboard", "success");
+                actions.toast(t("admin.apiKeyCopied"), "success");
               }}
             >
-              Copy key
+              {t("messages.copyLink")}
             </button>
             <button type="button" className="button ghost" onClick={() => setSecret(null)}>
-              Done
+              {t("modals.done")}
             </button>
           </div>
           <small>
-            Try it: <code>curl -H &quot;Authorization: Bearer {secret.token.slice(0, 14)}…&quot; {location.origin}/api/auth/me</code>
+            {t("admin.tryIt")} <code>curl -H &quot;Authorization: Bearer {secret.token.slice(0, 14)}…&quot; {location.origin}/api/auth/me</code>
           </small>
         </div>
       ) : null}
@@ -470,7 +476,7 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
         onSubmit={async (event) => {
           event.preventDefault();
           if (form.scopes.length === 0) {
-            actions.toast("Grant at least one scope", "error");
+            actions.toast(t("admin.grantScope"), "error");
             return;
           }
           try {
@@ -492,7 +498,7 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
         }}
       >
         <label className="field">
-          Key name
+          {t("admin.keyName")}
           <input
             value={form.name}
             onChange={(event) => setForm({ ...form, name: event.target.value })}
@@ -503,29 +509,29 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
 
         <div className="api-key-row">
           <label className="field">
-            Acts as
+            {t("admin.actsAs")}
             <select
               value={form.identity}
               onChange={(event) => setForm({ ...form, identity: event.target.value as "bot" | "self" })}
             >
-              <option value="bot">Its own bot identity</option>
-              <option value="self">Me</option>
+              <option value="bot">{t("admin.ownBotIdentity")}</option>
+              <option value="self">{t("admin.me")}</option>
             </select>
           </label>
           {form.identity === "bot" ? (
             <label className="field">
-              Bot role
+              {t("admin.botRole")}
               <select
                 value={form.botRole}
                 onChange={(event) => setForm({ ...form, botRole: event.target.value as "member" | "admin" })}
               >
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
+                <option value="member">{t("admin.member")}</option>
+                <option value="admin">{t("admin.admin")}</option>
               </select>
             </label>
           ) : null}
           <label className="field">
-            Requests / minute
+            {t("admin.requestsMinute")}
             <input
               type="number"
               min={1}
@@ -535,7 +541,7 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
             />
           </label>
           <label className="field">
-            Messages / minute
+            {t("admin.messagesMinute")}
             <input
               type="number"
               min={1}
@@ -545,19 +551,19 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
             />
           </label>
           <label className="field">
-            Expires in days
+            {t("admin.expiresDays")}
             <input
               type="number"
               min={1}
               value={form.expiresInDays}
-              placeholder="never"
+              placeholder={t("admin.never")}
               onChange={(event) => setForm({ ...form, expiresInDays: event.target.value })}
             />
           </label>
         </div>
 
         <fieldset className="scope-grid">
-          <legend>Scopes</legend>
+          <legend>{t("admin.scopes")}</legend>
           {catalogue.map((entry) => (
             <label key={entry.scope} className="checkbox-field">
               <input
@@ -574,15 +580,15 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
         </fieldset>
 
         <button type="submit" className="button primary">
-          Create API key
+          {t("admin.createApiKey")}
         </button>
       </form>
 
       {!keys ? (
-        <Spinner label="Loading API keys" />
+        <Spinner label={t("admin.loadingApiKeys")} />
       ) : (
         <div className="admin-list">
-          {keys.length === 0 ? <p className="muted">No API keys yet.</p> : null}
+          {keys.length === 0 ? <p className="muted">{t("admin.noApiKeys")}</p> : null}
           {keys.map((key) => (
             <div key={key.id} className="admin-row">
               <div className="admin-row-main">
@@ -591,10 +597,10 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
                     {key.name} <code>{key.prefix}…</code>
                   </strong>
                   <small>
-                    as {key.actor.displayName}
-                    {key.actor.isBot ? " (bot)" : ""} · {key.scopes.length} scopes · {key.rateLimitPerMinute}/min ·{" "}
-                    {key.requestCount} calls ·{" "}
-                    {key.lastUsedAt ? `last used ${formatRelative(key.lastUsedAt)}` : "never used"}
+                    {t("admin.asActor", { actor: key.actor.displayName })}
+                    {key.actor.isBot ? ` ${t("admin.bot")}` : ""} · {t("admin.scopesCount", { count: key.scopes.length })} · {key.rateLimitPerMinute}/min ·{" "}
+                    {t("admin.calls", { count: key.requestCount })} ·{" "}
+                    {key.lastUsedAt ? t("panels.lastUsed", { time: formatRelative(key.lastUsedAt) }) : t("panels.neverUsed")}
                     {key.expiresAt ? ` · expires ${formatRelative(key.expiresAt)}` : ""}
                   </small>
                 </span>
@@ -604,7 +610,7 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
                   type="button"
                   className="button ghost"
                   onClick={async () => {
-                    if (!window.confirm(`Rotate “${key.name}”? The current secret stops working immediately.`)) return;
+                    if (!window.confirm(t("admin.rotateConfirm", { name: key.name }))) return;
                     try {
                       const { token } = await api.apiKeys.rotate(key.id);
                       setSecret({ token, name: key.name });
@@ -614,13 +620,13 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
                     }
                   }}
                 >
-                  <RefreshCw size={13} /> Rotate
+                  <RefreshCw size={13} /> {t("admin.rotate")}
                 </button>
                 <button
                   type="button"
                   className="button ghost"
                   onClick={async () => {
-                    if (!window.confirm(`Revoke “${key.name}”? Anything using it stops working.`)) return;
+                    if (!window.confirm(t("admin.revokeKeyConfirm", { name: key.name }))) return;
                     try {
                       await api.apiKeys.revoke(key.id);
                       load();
@@ -629,7 +635,7 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
                     }
                   }}
                 >
-                  Revoke
+                  {t("common.revoke")}
                 </button>
               </div>
             </div>
@@ -642,6 +648,7 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
 
 function Settings({ workspaceId, isOwner }: { workspaceId: string; isOwner: boolean }) {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const workspace = state.bootstrap?.workspace;
   const [form, setForm] = useState({
     name: workspace?.name ?? "",
@@ -667,28 +674,28 @@ function Settings({ workspaceId, isOwner }: { workspaceId: string; isOwner: bool
             retentionDays: form.retentionDays === "" ? null : Number(form.retentionDays)
           });
           await actions.refreshBootstrap();
-          actions.toast("Workspace updated", "success");
+          actions.toast(t("admin.workspaceUpdated"), "success");
         } catch (error) {
           actions.fail(error);
         }
       }}
     >
       <label className="field">
-        Workspace name
+        {t("admin.workspaceName")}
         <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
       </label>
       <label className="field">
-        Description
+        {t("panels.description")}
         <textarea value={form.description ?? ""} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={3} />
       </label>
       <label className="field">
-        Icon emoji
+        {t("admin.iconEmoji")}
         <input value={form.iconEmoji ?? ""} onChange={(event) => setForm({ ...form, iconEmoji: event.target.value })} placeholder="🚀" />
       </label>
       <label className="checkbox-field">
         <input type="checkbox" checked={form.membersCanInvite} onChange={(event) => setForm({ ...form, membersCanInvite: event.target.checked })} />
         <span>
-          <strong>Members can invite people</strong>
+          <strong>{t("admin.membersCanInvite")}</strong>
         </span>
       </label>
       <label className="checkbox-field">
@@ -698,12 +705,12 @@ function Settings({ workspaceId, isOwner }: { workspaceId: string; isOwner: bool
           onChange={(event) => setForm({ ...form, membersCanCreateChannels: event.target.checked })}
         />
         <span>
-          <strong>Members can create channels</strong>
+          <strong>{t("admin.membersCanCreateChannels")}</strong>
         </span>
       </label>
       {isOwner ? (
         <label className="field">
-          Message retention (days, blank keeps forever)
+          {t("admin.retention")}
           <input
             type="number"
             min={1}
@@ -713,13 +720,14 @@ function Settings({ workspaceId, isOwner }: { workspaceId: string; isOwner: bool
         </label>
       ) : null}
       <button type="submit" className="button primary">
-        Save settings
+        {t("admin.saveSettings")}
       </button>
     </form>
   );
 }
 
 function AuditLog({ workspaceId }: { workspaceId: string }) {
+  const { t } = useI18n();
   const [events, setEvents] = useState<Array<{ id: string; type: string; createdAt: string; actor: { displayName: string } | null }> | null>(
     null
   );
@@ -731,7 +739,7 @@ function AuditLog({ workspaceId }: { workspaceId: string }) {
       .catch(() => setEvents([]));
   }, [workspaceId]);
 
-  if (!events) return <Spinner label="Loading audit log" />;
+  if (!events) return <Spinner label={t("admin.loadingAuditLog")} />;
 
   return (
     <div className="admin-list">
@@ -739,7 +747,7 @@ function AuditLog({ workspaceId }: { workspaceId: string }) {
         <div key={event.id} className="admin-row compact">
           <span>
             <strong>{event.type}</strong>
-            <small>{event.actor?.displayName ?? "system"}</small>
+            <small>{event.actor?.displayName ?? t("admin.system")}</small>
           </span>
           <time>{formatRelative(event.createdAt)}</time>
         </div>
@@ -750,6 +758,7 @@ function AuditLog({ workspaceId }: { workspaceId: string }) {
 
 function Exports({ workspaceId, isOwner }: { workspaceId: string; isOwner: boolean }) {
   const { actions } = useApp();
+  const { t } = useI18n();
   const [jobs, setJobs] = useState<Array<{ id: string; status: string; createdAt: string; fileUrl: string | null }> | null>(null);
 
   const load = useCallback(() => {
@@ -761,13 +770,12 @@ function Exports({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
 
   useEffect(load, [load]);
 
-  if (!isOwner) return <p className="muted">Only workspace owners can export data.</p>;
+  if (!isOwner) return <p className="muted">{t("admin.ownersOnlyExport")}</p>;
 
   return (
     <div className="stack-form">
       <p className="muted">
-        Exports include every message, channel, member and active file manifest as JSONL and CSV, stored in object storage
-        for 7 days.
+        {t("admin.exportHint")}
       </p>
       <button
         type="button"
@@ -775,21 +783,21 @@ function Exports({ workspaceId, isOwner }: { workspaceId: string; isOwner: boole
         onClick={async () => {
           try {
             await api.workspaces.requestExport(workspaceId);
-            actions.toast("Export queued — it will appear below when ready", "success");
+            actions.toast(t("admin.exportQueued"), "success");
             setTimeout(load, 2000);
           } catch (error) {
             actions.fail(error);
           }
         }}
       >
-        Start a new export
+        {t("admin.startExport")}
       </button>
       <div className="admin-list">
         {(jobs ?? []).map((job) => (
           <div key={job.id} className="admin-row compact">
             <span>
               <strong className="capitalize">{job.status}</strong>
-              <small>{job.fileUrl ?? "Preparing…"}</small>
+              <small>{job.fileUrl ?? t("admin.preparing")}</small>
             </span>
             <time>{formatRelative(job.createdAt)}</time>
           </div>

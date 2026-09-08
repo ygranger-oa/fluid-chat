@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { Clock, HelpCircle, LogOut, Menu, Moon, Search, Settings, Smile, UserCircle } from "lucide-react";
+import { useI18n } from "../../i18n";
 import { useApp } from "../../store";
 import { Avatar, MenuDivider, MenuItem, Popover } from "../ui/primitives";
 
 export function TopBar() {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const session = state.session;
   // The label follows what is on screen, which may be the OS theme.
@@ -18,7 +20,7 @@ export function TopBar() {
         <button
           type="button"
           className="icon-button menu-toggle"
-          aria-label="Toggle navigation"
+          aria-label={t("topBar.toggleNavigation")}
           aria-expanded={state.sidebarOpen}
           onClick={() => actions.setSidebarOpen(!state.sidebarOpen)}
         >
@@ -38,8 +40,8 @@ export function TopBar() {
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder={`Search ${state.bootstrap?.workspace.name ?? "workspace"}`}
-          aria-label="Search messages"
+          placeholder={t("topBar.searchWorkspace", { workspace: state.bootstrap?.workspace.name ?? t("app.workspace") })}
+          aria-label={t("topBar.searchMessages")}
           onKeyDown={(event) => {
             if (event.key === "Escape") setQuery("");
             if (event.key === "Enter" && query.trim()) {
@@ -52,7 +54,7 @@ export function TopBar() {
       </form>
 
       <div className="top-bar-right">
-        <button type="button" className="icon-button" onClick={() => actions.setModal({ kind: "shortcuts" })} aria-label="Keyboard shortcuts">
+        <button type="button" className="icon-button" onClick={() => actions.setModal({ kind: "shortcuts" })} aria-label={t("topBar.keyboardShortcuts")}>
           <HelpCircle size={18} />
         </button>
 
@@ -60,7 +62,7 @@ export function TopBar() {
           width={300}
           align="end"
           trigger={({ toggle, ref }) => (
-            <button type="button" className="avatar-button" ref={ref} onClick={toggle} aria-label="You">
+            <button type="button" className="avatar-button" ref={ref} onClick={toggle} aria-label={t("topBar.you")}>
               <Avatar user={session ?? undefined} size={30} />
             </button>
           )}
@@ -69,7 +71,7 @@ export function TopBar() {
             <div className="menu">
               <div className="menu-heading">
                 <strong>{session?.displayName}</strong>
-                <span>{session?.statusText ? `${session.statusEmoji ? "" : ""} ${session.statusText}` : "Set a status"}</span>
+                <span>{session?.statusText ? `${session.statusEmoji ? "" : ""} ${session.statusText}` : t("topBar.setStatus")}</span>
               </div>
               <MenuItem
                 onClick={() => {
@@ -77,7 +79,7 @@ export function TopBar() {
                   close();
                 }}
               >
-                <Smile size={14} /> Update your status
+                <Smile size={14} /> {t("topBar.updateStatus")}
               </MenuItem>
               <MenuItem
                 onClick={() => {
@@ -85,7 +87,7 @@ export function TopBar() {
                   close();
                 }}
               >
-                <UserCircle size={14} /> Set yourself {session?.presence === "away" ? "active" : "away"}
+                <UserCircle size={14} /> {t("topBar.setPresence", { presence: session?.presence === "away" ? t("app.active").toLowerCase() : t("app.away").toLowerCase() })}
               </MenuItem>
               <MenuItem
                 onClick={() => {
@@ -93,7 +95,7 @@ export function TopBar() {
                   close();
                 }}
               >
-                <Clock size={14} /> Pause notifications for 1 hour
+                <Clock size={14} /> {t("topBar.pauseNotifications")}
               </MenuItem>
               <MenuDivider />
               <MenuItem
@@ -102,7 +104,7 @@ export function TopBar() {
                   close();
                 }}
               >
-                <UserCircle size={14} /> Edit profile
+                <UserCircle size={14} /> {t("topBar.editProfile")}
               </MenuItem>
               <MenuItem
                 onClick={() => {
@@ -110,7 +112,7 @@ export function TopBar() {
                   close();
                 }}
               >
-                <Settings size={14} /> Preferences
+                <Settings size={14} /> {t("common.preferences")}
               </MenuItem>
               <MenuItem
                 onClick={() => {
@@ -118,7 +120,7 @@ export function TopBar() {
                   close();
                 }}
               >
-                <Moon size={14} /> Switch to {resolvedTheme === "dark" ? "light" : "dark"} theme
+                <Moon size={14} /> {t("topBar.switchTheme", { theme: resolvedTheme === "dark" ? t("topBar.light") : t("topBar.dark") })}
               </MenuItem>
               <MenuDivider />
               <MenuItem
@@ -128,7 +130,7 @@ export function TopBar() {
                   close();
                 }}
               >
-                <LogOut size={14} /> Sign out
+                <LogOut size={14} /> {t("auth.signOut")}
               </MenuItem>
             </div>
           )}

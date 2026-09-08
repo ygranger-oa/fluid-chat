@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { ArrowDown } from "lucide-react";
 import type { MessageDto } from "@/shared/types";
 import { formatDayLabel, isSameDay } from "../../format";
+import { useI18n } from "../../i18n";
 import { typingKey, useApp, useDirectory } from "../../store";
 import { Spinner } from "../ui/primitives";
 import { MessageItem } from "./message-item";
@@ -15,6 +16,7 @@ const BOTTOM_THRESHOLD_PX = 48;
 
 export function MessageList({ conversationId }: { conversationId: string }) {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const bucket = state.messages[conversationId];
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -82,7 +84,7 @@ export function MessageList({ conversationId }: { conversationId: string }) {
   if (!bucket || (bucket.loading && messages.length === 0)) {
     return (
       <div className="message-scroll is-loading">
-        <Spinner label="Loading messages" />
+        <Spinner label={t("messages.loadingMessages")} />
       </div>
     );
   }
@@ -92,7 +94,7 @@ export function MessageList({ conversationId }: { conversationId: string }) {
       <div className="message-scroll" ref={scrollRef} onScroll={onScroll}>
         <div ref={contentRef}>
           {bucket.hasMore ? (
-            <div className="history-loader">{bucket.loading ? <Spinner label="Loading history" /> : "Scroll for older messages"}</div>
+            <div className="history-loader">{bucket.loading ? <Spinner label={t("messages.loadingHistory")} /> : t("messages.scrollOlder")}</div>
           ) : (
             <ConversationIntro conversationId={conversationId} />
           )}
@@ -117,7 +119,7 @@ export function MessageList({ conversationId }: { conversationId: string }) {
                 ) : null}
                 {unreadMarkerId === message.id ? (
                   <div className="unread-divider">
-                    <span>New messages</span>
+                    <span>{t("messages.newMessages")}</span>
                   </div>
                 ) : null}
                 <MessageItem message={message} grouped={grouped} />
@@ -139,7 +141,7 @@ export function MessageList({ conversationId }: { conversationId: string }) {
             scrollToBottom("smooth");
           }}
         >
-          <ArrowDown size={14} /> Jump to latest
+          <ArrowDown size={14} /> {t("messages.jumpLatest")}
         </button>
       ) : null}
     </div>
@@ -148,6 +150,7 @@ export function MessageList({ conversationId }: { conversationId: string }) {
 
 function ConversationIntro({ conversationId }: { conversationId: string }) {
   const { state } = useApp();
+  const { t } = useI18n();
   const directory = useDirectory();
   const conversation = state.bootstrap?.conversations.find((entry) => entry.id === conversationId);
   if (!conversation) return null;
@@ -159,12 +162,10 @@ function ConversationIntro({ conversationId }: { conversationId: string }) {
           {conversation.channel.visibility === "private" ? "🔒" : "#"} {conversation.channel.name}
         </h2>
         <p>
-          This is the very beginning of the{" "}
-          <strong>
-            {conversation.channel.visibility === "private" ? "" : "#"}
-            {conversation.channel.name}
-          </strong>{" "}
-          channel.{conversation.channel.description ? ` ${conversation.channel.description}` : ""}
+          {t("messages.channelIntro", {
+            channel: `${conversation.channel.visibility === "private" ? "" : "#"}${conversation.channel.name}`,
+            description: conversation.channel.description ? ` ${conversation.channel.description}` : ""
+          })}
         </p>
       </div>
     );
@@ -173,8 +174,8 @@ function ConversationIntro({ conversationId }: { conversationId: string }) {
   const others = conversation.memberIds.filter((id) => id !== state.session?.id).map((id) => directory.get(id));
   return (
     <div className="conversation-intro">
-      <h2>{others.map((user) => user?.displayName ?? "Someone").join(", ")}</h2>
-      <p>This is the start of your direct message history. Only the people here can see it.</p>
+      <h2>{others.map((user) => user?.displayName ?? t("app.someone")).join(", ")}</h2>
+      <p>{t("messages.dmIntro")}</p>
     </div>
   );
 }
@@ -187,6 +188,7 @@ export function TypingIndicator({
   parentMessageId?: string | null;
 }) {
   const { state } = useApp();
+  const { t } = useI18n();
   const directory = useDirectory();
   const typing = state.typing[typingKey(conversationId, parentMessageId)];
   const names = Object.keys(typing ?? {})
@@ -196,10 +198,10 @@ export function TypingIndicator({
   if (names.length === 0) return <div className="typing-indicator" aria-live="polite" />;
   const label =
     names.length === 1
-      ? `${names[0]} is typing`
+      ? t("messages.isTyping", { name: names[0] })
       : names.length === 2
-        ? `${names[0]} and ${names[1]} are typing`
-        : "Several people are typing";
+        ? t("messages.twoTyping", { first: names[0], second: names[1] })
+        : t("messages.severalTyping");
   return (
     <div className="typing-indicator is-active" aria-live="polite">
       <span className="typing-dots">

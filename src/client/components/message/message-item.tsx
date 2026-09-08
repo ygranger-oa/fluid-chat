@@ -22,6 +22,7 @@ import type { FileSummary, MessageDto } from "@/shared/types";
 import { toMentionDisplay, toMentionWire } from "@/shared/mention-text";
 import { api } from "../../api";
 import { formatBytes, formatDateTime, formatRelative, formatTime } from "../../format";
+import { useI18n } from "../../i18n";
 import { useApp, useDirectory, useMentionDirectory } from "../../store";
 import { Avatar, IconButton, MenuDivider, MenuItem, Popover } from "../ui/primitives";
 import { EmojiPicker } from "../ui/emoji-picker";
@@ -41,6 +42,7 @@ export function MessageItem({
   highlight?: boolean;
 }) {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const directory = useDirectory();
   const mentions = useMentionDirectory();
   const [localEditing, setLocalEditing] = useState(false);
@@ -85,7 +87,7 @@ export function MessageItem({
       <article className="message is-deleted" data-message-id={message.id}>
         <div className="message-gutter" />
         <div className="message-content">
-          <p className="deleted-note">This message was deleted.</p>
+          <p className="deleted-note">{t("messages.deleted")}</p>
         </div>
       </article>
     );
@@ -106,7 +108,7 @@ export function MessageItem({
             type="button"
             className="avatar-button"
             onClick={() => actions.setRightPanel({ kind: "profile", userId: message.senderId })}
-            aria-label={`Open ${sender?.displayName ?? "profile"}`}
+            aria-label={t("messages.openProfile", { name: sender?.displayName ?? t("common.profile") })}
           >
             <Avatar user={sender} size={36} />
           </button>
@@ -121,17 +123,17 @@ export function MessageItem({
               className="sender-name"
               onClick={() => actions.setRightPanel({ kind: "profile", userId: message.senderId })}
             >
-              {sender?.displayName ?? "Unknown"}
+              {sender?.displayName ?? t("app.unknown")}
             </button>
-            {sender?.isBot ? <span className="pill app-pill">APP</span> : null}
+            {sender?.isBot ? <span className="pill app-pill">{t("messages.app")}</span> : null}
             {sender?.statusEmoji ? <EmojiValue value={`:${sender.statusEmoji}:`} /> : null}
             <time dateTime={message.createdAt} title={formatDateTime(message.createdAt, timeFormat)}>
               {formatTime(message.createdAt, timeFormat)}
             </time>
-            {message.editedAt ? <span className="edited">(edited)</span> : null}
+            {message.editedAt ? <span className="edited">{t("messages.edited")}</span> : null}
             {message.pinned ? (
               <span className="pill">
-                <Pin size={11} /> pinned
+                <Pin size={11} /> {t("messages.pinned")}
               </span>
             ) : null}
           </div>
@@ -166,10 +168,10 @@ export function MessageItem({
             />
             <div className="edit-actions">
               <button type="button" className="button ghost" onClick={() => setEditing(false)}>
-                Cancel
+                {t("common.cancel")}
               </button>
               <button type="submit" className="button primary" disabled={!editText.trim()}>
-                Save changes
+                {t("common.saveChanges")}
               </button>
             </div>
           </form>
@@ -189,7 +191,7 @@ export function MessageItem({
                   key={file.id}
                   type="button"
                   className="attachment-image"
-                  aria-label={`Preview ${file.name}`}
+                  aria-label={t("messages.previewFile", { name: file.name })}
                   onClick={() => setPreviewFile(file)}
                 >
                   {/* Known dimensions keep the scroll position stable while images load. */}
@@ -239,22 +241,22 @@ export function MessageItem({
               ))}
             </span>
             <span className="thread-count">
-              {message.thread.replyCount} {message.thread.replyCount === 1 ? "reply" : "replies"}
+              {message.thread.replyCount} {message.thread.replyCount === 1 ? t("messages.reply") : t("messages.replies")}
             </span>
             {message.thread.lastReplyAt ? (
-              <span className="thread-time">Last reply {formatRelative(message.thread.lastReplyAt)}</span>
+              <span className="thread-time">{t("messages.lastReply", { time: formatRelative(message.thread.lastReplyAt) })}</span>
             ) : null}
           </button>
         ) : null}
       </div>
 
-      <div className="message-toolbar" role="toolbar" aria-label="Message actions">
+      <div className="message-toolbar" role="toolbar" aria-label={t("messages.actions")}>
         <QuickReactions message={message} />
         <Popover
           width={340}
           align="end"
           trigger={({ toggle, ref }) => (
-            <button type="button" ref={ref} onClick={toggle} title="Add reaction">
+            <button type="button" ref={ref} onClick={toggle} title={t("messages.addReaction")}>
               <Smile size={16} />
             </button>
           )}
@@ -263,18 +265,18 @@ export function MessageItem({
         </Popover>
 
         {context !== "thread" ? (
-          <button type="button" title="Reply in thread" onClick={() => void actions.openThread(message.id)}>
+          <button type="button" title={t("messages.replyThread")} onClick={() => void actions.openThread(message.id)}>
             <MessageSquare size={16} />
           </button>
         ) : null}
 
-        <button type="button" title="Share message" onClick={() => actions.setModal({ kind: "share", messageId: message.id })}>
+        <button type="button" title={t("messages.share")} onClick={() => actions.setModal({ kind: "share", messageId: message.id })}>
           <Share2 size={16} />
         </button>
 
         <button
           type="button"
-          title={message.saved ? "Remove from saved" : "Save for later"}
+          title={message.saved ? t("messages.removeSaved") : t("messages.saveLater")}
           onClick={async () => {
             try {
               if (message.saved) await api.messages.unsave(message.id);
@@ -292,7 +294,7 @@ export function MessageItem({
           width={230}
           align="end"
           trigger={({ toggle, ref }) => (
-            <button type="button" ref={ref} onClick={toggle} title="More actions">
+            <button type="button" ref={ref} onClick={toggle} title={t("messages.moreActions")}>
               <MoreVertical size={16} />
             </button>
           )}
@@ -306,7 +308,7 @@ export function MessageItem({
                     close();
                   }}
                 >
-                  <Pencil size={14} /> Edit message
+                  <Pencil size={14} /> {t("messages.edit")}
                 </MenuItem>
               ) : null}
               <MenuItem
@@ -316,14 +318,14 @@ export function MessageItem({
                     if (message.pinned) await api.messages.unpin(message.id);
                     else await api.messages.pin(message.id);
                     actions.upsertMessage({ ...message, pinned: !message.pinned });
-                    actions.toast(message.pinned ? "Message unpinned" : "Message pinned to this conversation");
+                    actions.toast(message.pinned ? t("messages.unpinnedToast") : t("messages.pinnedToast"));
                   } catch (error) {
                     actions.fail(error);
                   }
                 }}
               >
                 {message.pinned ? <PinOff size={14} /> : <Pin size={14} />}
-                {message.pinned ? "Unpin from conversation" : "Pin to conversation"}
+                {message.pinned ? t("messages.unpin") : t("messages.pin")}
               </MenuItem>
               {message.thread.replyCount > 0 || context === "thread" ? (
                 <MenuItem
@@ -336,27 +338,27 @@ export function MessageItem({
                         ...message,
                         thread: { ...message.thread, following: next === "following" }
                       });
-                      actions.toast(next === "following" ? "Following this thread" : "You will not be notified about this thread");
+                      actions.toast(next === "following" ? t("messages.followingToast") : t("messages.mutedToast"));
                     } catch (error) {
                       actions.fail(error);
                     }
                   }}
                 >
-                  <Bell size={14} /> {message.thread.following ? "Unfollow thread" : "Follow thread"}
+                  <Bell size={14} /> {message.thread.following ? t("messages.unfollowThread") : t("messages.followThread")}
                 </MenuItem>
               ) : null}
               <div className="menu-submenu">
                 <span className="menu-submenu-label">
-                  <Clock size={14} /> Remind me
+                  <Clock size={14} /> {t("messages.remindMe")}
                 </span>
                 <div className="menu-submenu-options">
                   {(
                     [
-                      ["in 20 minutes", "20 min"],
-                      ["in 1 hour", "1 hour"],
-                      ["in 3 hours", "3 hours"],
-                      ["tomorrow at 9am", "Tomorrow"],
-                      ["next week at 9am", "Next week"]
+                      ["in 20 minutes", t("messages.in20")],
+                      ["in 1 hour", t("messages.in1h")],
+                      ["in 3 hours", t("messages.in3h")],
+                      ["tomorrow at 9am", t("messages.tomorrow")],
+                      ["next week at 9am", t("messages.nextWeek")]
                     ] as const
                   ).map(([value, label]) => (
                     <button
@@ -366,7 +368,7 @@ export function MessageItem({
                         close();
                         try {
                           const { reminder } = await api.messages.remind(message.id, value);
-                          actions.toast(`Reminder set for ${new Date(reminder.remindAt).toLocaleString()}`, "success");
+                          actions.toast(t("messages.reminderSet", { time: new Date(reminder.remindAt).toLocaleString() }), "success");
                         } catch (error) {
                           actions.fail(error);
                         }
@@ -381,30 +383,30 @@ export function MessageItem({
                 onClick={() => {
                   close();
                   void navigator.clipboard.writeText(message.bodyText);
-                  actions.toast("Message text copied", "success");
+                  actions.toast(t("messages.copiedText"), "success");
                 }}
               >
-                <Copy size={14} /> Copy text
+                <Copy size={14} /> {t("messages.copyText")}
               </MenuItem>
               <MenuItem
                 onClick={() => {
                   close();
                   const url = `${window.location.origin}/?conversation=${message.conversationId}&message=${message.id}`;
                   void navigator.clipboard.writeText(url);
-                  actions.toast("Link copied to clipboard", "success");
+                  actions.toast(t("messages.copiedLink"), "success");
                 }}
               >
-                <Link2 size={14} /> Copy link
+                <Link2 size={14} /> {t("messages.copyLink")}
               </MenuItem>
               <MenuItem
                 onClick={async () => {
                   close();
                   await api.conversations.markUnread(message.conversationId, message.id);
                   await actions.refreshConversations();
-                  actions.toast("Marked unread from here");
+                  actions.toast(t("messages.markedUnread"));
                 }}
               >
-                <MessageSquare size={14} /> Mark unread from here
+                <MessageSquare size={14} /> {t("messages.markUnreadHere")}
               </MenuItem>
               {isAuthor || canModerate ? (
                 <>
@@ -413,7 +415,7 @@ export function MessageItem({
                     danger
                     onClick={async () => {
                       close();
-                      if (!window.confirm("Delete this message? This cannot be undone.")) return;
+                      if (!window.confirm(t("messages.deleteConfirm"))) return;
                       try {
                         await api.messages.remove(message.id);
                       } catch (error) {
@@ -421,7 +423,7 @@ export function MessageItem({
                       }
                     }}
                   >
-                    <Trash2 size={14} /> Delete message
+                    <Trash2 size={14} /> {t("messages.delete")}
                   </MenuItem>
                 </>
               ) : null}
@@ -438,6 +440,7 @@ function SharedMessage({ messageId }: { messageId: string }) {
   const [message, setMessage] = useState<MessageDto | null>(null);
   const directory = useDirectory();
   const { state } = useApp();
+  const { t } = useI18n();
   const timeFormat = state.session?.preferences?.timeFormat ?? "12h";
 
   useEffect(() => {
@@ -454,13 +457,13 @@ function SharedMessage({ messageId }: { messageId: string }) {
   }, [messageId]);
 
   const sender = useMemo(() => (message ? directory.get(message.senderId) : undefined), [directory, message]);
-  if (!message) return <div className="quoted-message is-loading">Loading shared message…</div>;
+  if (!message) return <div className="quoted-message is-loading">{t("messages.loadingShared")}</div>;
 
   return (
     <div className="quoted-message">
       <div className="quoted-head">
         <Avatar user={sender} size={20} presence={false} />
-        <strong>{sender?.displayName ?? "Unknown"}</strong>
+        <strong>{sender?.displayName ?? t("app.unknown")}</strong>
         <time>{formatDateTime(message.createdAt, timeFormat)}</time>
       </div>
       <RichText text={message.bodyText} />

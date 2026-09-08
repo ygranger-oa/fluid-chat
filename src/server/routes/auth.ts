@@ -81,7 +81,7 @@ export const authRoutes = defineRoutes({
           passwordHash,
           presence: "active",
           lastActiveAt: new Date(),
-          preferences: { theme: "system", enterToSend: true, timeFormat: "12h", notificationSound: true }
+          preferences: { theme: "system", language: "system", enterToSend: true, timeFormat: "12h", notificationSound: true }
         })
         .returning();
       await tx.update(users).set({ avatarColor: avatarColorFor(created.id) }).where(eq(users.id, created.id));

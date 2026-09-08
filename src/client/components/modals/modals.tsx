@@ -5,6 +5,7 @@ import { Check, Copy, Hash, Lock } from "lucide-react";
 import { api } from "../../api";
 import { track } from "../../analytics";
 import { EMOJI_CATEGORIES } from "../../emoji";
+import { useI18n } from "../../i18n";
 import { conversationTitle, useApp, useDirectory } from "../../store";
 import { Avatar, Modal } from "../ui/primitives";
 import { RichText } from "../message/rich-text";
@@ -15,6 +16,7 @@ import { RichText } from "../message/rich-text";
 
 export function InviteModal({ onClose }: { onClose: () => void }) {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const [emails, setEmails] = useState("");
   const [role, setRole] = useState<"member" | "admin" | "guest">("member");
   const [inviteLink, setInviteLink] = useState<string | null>(null);
@@ -23,11 +25,11 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal
-      title={`Invite people to ${state.bootstrap?.workspace.name ?? "workspace"}`}
+      title={t("modals.invitePeopleTo", { workspace: state.bootstrap?.workspace.name ?? t("app.workspace") })}
       onClose={onClose}
       footer={
         <button type="button" className="button ghost" onClick={onClose}>
-          Done
+          {t("modals.done")}
         </button>
       }
     >
@@ -47,7 +49,7 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
             setSent(invites.map((invite) => invite.inviteUrl));
             setEmails("");
             actions.toast(
-              `${invites.length} invite${invites.length === 1 ? "" : "s"} sent${skipped.length ? `, ${skipped.length} already pending` : ""}`,
+              t("modals.invitesSent", { count: invites.length, skipped: skipped.length ? t("modals.alreadyPending", { count: skipped.length }) : "" }),
               "success"
             );
           } catch (error) {
@@ -56,7 +58,7 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
         }}
       >
         <label className="field">
-          Email addresses
+          {t("modals.emailAddresses")}
           <textarea
             value={emails}
             onChange={(event) => setEmails(event.target.value)}
@@ -65,21 +67,21 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
           />
         </label>
         <label className="field">
-          Role
+          {t("modals.role")}
           <select value={role} onChange={(event) => setRole(event.target.value as typeof role)}>
-            <option value="member">Member — full access to public channels</option>
-            <option value="admin">Admin — can manage members and channels</option>
-            <option value="guest">Guest — only the channels you add them to</option>
+            <option value="member">{t("modals.roleMember")}</option>
+            <option value="admin">{t("modals.roleAdmin")}</option>
+            <option value="guest">{t("modals.roleGuest")}</option>
           </select>
         </label>
         <button type="submit" className="button primary">
-          Send invitations
+          {t("modals.sendInvitations")}
         </button>
       </form>
 
       {sent.length > 0 ? (
         <div className="invite-links">
-          <h4>Invitation links</h4>
+          <h4>{t("modals.invitationLinks")}</h4>
           {sent.map((link) => (
             <code key={link}>{link}</code>
           ))}
@@ -87,8 +89,8 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
       ) : null}
 
       <div className="modal-section">
-        <h4>Share an invite link</h4>
-        <p className="muted">Anyone with the link can join as a member. The link expires in 30 days.</p>
+        <h4>{t("modals.shareInviteLink")}</h4>
+        <p className="muted">{t("modals.inviteLinkHint")}</p>
         {inviteLink ? (
           <div className="copy-row">
             <code>{inviteLink}</code>
@@ -101,7 +103,7 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
                 setTimeout(() => setCopied(false), 1500);
               }}
             >
-              {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? "Copied" : "Copy"}
+              {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? t("common.copied") : t("common.copy")}
             </button>
           </div>
         ) : (
@@ -119,7 +121,7 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
               }
             }}
           >
-            Create invite link
+            {t("modals.createInviteLink")}
           </button>
         )}
       </div>
@@ -133,13 +135,14 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
 
 export function NewChannelModal({ onClose }: { onClose: () => void }) {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [busy, setBusy] = useState(false);
 
   return (
-    <Modal title="Create a channel" onClose={onClose}>
+    <Modal title={t("modals.createChannel")} onClose={onClose}>
       <form
         className="stack-form"
         onSubmit={async (event) => {
@@ -164,7 +167,7 @@ export function NewChannelModal({ onClose }: { onClose: () => void }) {
         }}
       >
         <label className="field">
-          Name
+          {t("modals.name")}
           <div className="prefixed-input">
             <span>{visibility === "private" ? <Lock size={14} /> : <Hash size={15} />}</span>
             <input
@@ -178,11 +181,11 @@ export function NewChannelModal({ onClose }: { onClose: () => void }) {
           </div>
         </label>
         <label className="field">
-          Description <span className="optional">(optional)</span>
+          {t("panels.description")} <span className="optional">{t("modals.optional")}</span>
           <input
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            placeholder="What is this channel about?"
+            placeholder={t("panels.description")}
             maxLength={500}
           />
         </label>
@@ -193,12 +196,12 @@ export function NewChannelModal({ onClose }: { onClose: () => void }) {
             onChange={(event) => setVisibility(event.target.checked ? "private" : "public")}
           />
           <span>
-            <strong>Make private</strong>
-            <small>Only invited people can see this channel.</small>
+            <strong>{t("modals.makePrivate")}</strong>
+            <small>{t("modals.makePrivateHint")}</small>
           </span>
         </label>
         <button type="submit" className="button primary" disabled={!name.trim() || busy}>
-          Create channel
+          {t("views.createChannel")}
         </button>
       </form>
     </Modal>
@@ -211,6 +214,7 @@ export function NewChannelModal({ onClose }: { onClose: () => void }) {
 
 export function NewDmModal({ onClose }: { onClose: () => void }) {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
 
@@ -221,7 +225,7 @@ export function NewDmModal({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal
-      title="New message"
+      title={t("modals.newMessage")}
       onClose={onClose}
       footer={
         <button
@@ -241,7 +245,7 @@ export function NewDmModal({ onClose }: { onClose: () => void }) {
             }
           }}
         >
-          Start conversation
+          {t("sidebar.startConversation")}
         </button>
       }
     >
@@ -259,7 +263,7 @@ export function NewDmModal({ onClose }: { onClose: () => void }) {
         className="modal-input"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search people"
+        placeholder={t("modals.searchPeople")}
         autoFocus
       />
       <div className="picker-list">
@@ -294,6 +298,7 @@ export function NewDmModal({ onClose }: { onClose: () => void }) {
 
 export function AddPeopleModal({ conversationId, onClose }: { conversationId: string; onClose: () => void }) {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const conversation = state.bootstrap?.conversations.find((entry) => entry.id === conversationId);
@@ -308,7 +313,7 @@ export function AddPeopleModal({ conversationId, onClose }: { conversationId: st
 
   return (
     <Modal
-      title={channel ? `Add people to #${channel.name}` : "Add people"}
+      title={channel ? t("modals.addPeopleToChannel", { channel: channel.name }) : t("modals.addPeople")}
       onClose={onClose}
       footer={
         <button
@@ -320,19 +325,19 @@ export function AddPeopleModal({ conversationId, onClose }: { conversationId: st
             try {
               await api.channels.addMembers(channel.id, selected);
               await actions.refreshBootstrap();
-              actions.toast(`Added ${selected.length} ${selected.length === 1 ? "person" : "people"}`, "success");
+              actions.toast(t("modals.addedPeople", { count: selected.length, label: selected.length === 1 ? t("modals.person") : t("modals.people") }), "success");
               onClose();
             } catch (error) {
               actions.fail(error);
             }
           }}
         >
-          Add
+          {t("modals.add")}
         </button>
       }
     >
       {!channel ? (
-        <p className="muted">You can only add people to channels. Start a new group message instead.</p>
+        <p className="muted">{t("modals.addPeopleChannelsOnly")}</p>
       ) : (
         <>
           <div className="chips">
@@ -354,7 +359,7 @@ export function AddPeopleModal({ conversationId, onClose }: { conversationId: st
             className="modal-input"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search people"
+            placeholder={t("modals.searchPeople")}
             autoFocus
           />
           <div className="picker-list">
@@ -378,7 +383,7 @@ export function AddPeopleModal({ conversationId, onClose }: { conversationId: st
                 </span>
               </button>
             ))}
-            {visible.length === 0 ? <p className="muted">Everyone in the workspace is already here.</p> : null}
+            {visible.length === 0 ? <p className="muted">{t("modals.everyoneAlreadyHere")}</p> : null}
           </div>
         </>
       )}
@@ -400,6 +405,7 @@ const STATUS_PRESETS = [
 
 export function StatusModal({ onClose }: { onClose: () => void }) {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const [emoji, setEmoji] = useState(state.session?.statusEmoji ?? "speech_balloon");
   const [text, setText] = useState(state.session?.statusText ?? "");
   const [minutes, setMinutes] = useState<number | null>(null);
@@ -411,7 +417,7 @@ export function StatusModal({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal
-      title="Set a status"
+      title={t("modals.setStatus")}
       onClose={onClose}
       footer={
         <>
@@ -423,7 +429,7 @@ export function StatusModal({ onClose }: { onClose: () => void }) {
               onClose();
             }}
           >
-            Clear status
+            {t("modals.clearStatus")}
           </button>
           <button
             type="button"
@@ -437,31 +443,31 @@ export function StatusModal({ onClose }: { onClose: () => void }) {
               onClose();
             }}
           >
-            Save
+            {t("modals.save")}
           </button>
         </>
       }
     >
       <div className="status-row">
-        <select value={emoji} onChange={(event) => setEmoji(event.target.value)} aria-label="Status emoji">
+        <select value={emoji} onChange={(event) => setEmoji(event.target.value)} aria-label={t("modals.statusEmoji")}>
           {emojiOptions.map((option) => (
             <option key={option.name} value={option.name}>
               {option.char} :{option.name}:
             </option>
           ))}
         </select>
-        <input value={text} onChange={(event) => setText(event.target.value)} placeholder="What is happening?" maxLength={140} />
+        <input value={text} onChange={(event) => setText(event.target.value)} placeholder={t("modals.statusPlaceholder")} maxLength={140} />
       </div>
 
       <label className="field">
-        Clear after
+        {t("modals.clearAfter")}
         <select value={minutes ?? ""} onChange={(event) => setMinutes(event.target.value ? Number(event.target.value) : null)}>
-          <option value="">Do not clear</option>
-          <option value="30">30 minutes</option>
-          <option value="60">1 hour</option>
-          <option value="240">4 hours</option>
-          <option value="480">Today</option>
-          <option value="10080">This week</option>
+          <option value="">{t("modals.doNotClear")}</option>
+          <option value="30">{t("modals.minutes30")}</option>
+          <option value="60">{t("modals.hour1")}</option>
+          <option value="240">{t("modals.hours4")}</option>
+          <option value="480">{t("modals.today")}</option>
+          <option value="10080">{t("modals.thisWeek")}</option>
         </select>
       </label>
 
@@ -490,6 +496,7 @@ export function StatusModal({ onClose }: { onClose: () => void }) {
 
 export function ProfileEditorModal({ onClose }: { onClose: () => void }) {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const session = state.session;
   const [form, setForm] = useState({
     displayName: session?.displayName ?? "",
@@ -502,7 +509,7 @@ export function ProfileEditorModal({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
 
   return (
-    <Modal title="Edit your profile" onClose={onClose}>
+    <Modal title={t("modals.editProfile")} onClose={onClose}>
       <form
         className="stack-form"
         onSubmit={async (event) => {
@@ -517,7 +524,7 @@ export function ProfileEditorModal({ onClose }: { onClose: () => void }) {
               phone: form.phone || null,
               timezone: form.timezone
             });
-            actions.toast("Profile updated", "success");
+            actions.toast(t("modals.profileUpdated"), "success");
             onClose();
           } catch (error) {
             actions.fail(error);
@@ -530,33 +537,33 @@ export function ProfileEditorModal({ onClose }: { onClose: () => void }) {
           <Avatar user={session ?? undefined} size={92} presence={false} />
           <div className="stack-form grow">
             <label className="field">
-              Full name
+              {t("auth.fullName")}
               <input value={form.displayName} onChange={(event) => setForm({ ...form, displayName: event.target.value })} required />
             </label>
             <label className="field">
-              Handle
+              {t("modals.handle")}
               <input value={form.handle} onChange={(event) => setForm({ ...form, handle: event.target.value })} placeholder="ada" />
             </label>
           </div>
         </div>
         <label className="field">
-          What I do
-          <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Product engineer" />
+          {t("modals.whatIDo")}
+          <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder={t("modals.productEngineer")} />
         </label>
         <label className="field">
-          Pronouns
-          <input value={form.pronouns} onChange={(event) => setForm({ ...form, pronouns: event.target.value })} placeholder="they/them" />
+          {t("panels.pronouns")}
+          <input value={form.pronouns} onChange={(event) => setForm({ ...form, pronouns: event.target.value })} placeholder={t("modals.pronounsPlaceholder")} />
         </label>
         <label className="field">
-          Phone
+          {t("modals.phone")}
           <input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} />
         </label>
         <label className="field">
-          Time zone
+          {t("modals.timeZone")}
           <input value={form.timezone} onChange={(event) => setForm({ ...form, timezone: event.target.value })} />
         </label>
         <div className="upload-avatar">
-          <span>Profile photo</span>
+          <span>{t("modals.profilePhoto")}</span>
           <input
             type="file"
             accept="image/*"
@@ -566,7 +573,7 @@ export function ProfileEditorModal({ onClose }: { onClose: () => void }) {
               try {
                 const { file: uploaded } = await api.files.upload(state.workspaceId, file);
                 await actions.updateProfile({ avatarUrl: uploaded.url });
-                actions.toast("Photo updated", "success");
+                actions.toast(t("modals.photoUpdated"), "success");
               } catch (error) {
                 actions.fail(error);
               }
@@ -574,7 +581,7 @@ export function ProfileEditorModal({ onClose }: { onClose: () => void }) {
           />
         </div>
         <button type="submit" className="button primary" disabled={busy}>
-          Save changes
+          {t("common.saveChanges")}
         </button>
       </form>
     </Modal>
@@ -587,6 +594,7 @@ export function ProfileEditorModal({ onClose }: { onClose: () => void }) {
 
 export function PreferencesModal({ onClose }: { onClose: () => void }) {
   const { state, actions } = useApp();
+  const { languageOptions, t } = useI18n();
   const preferences = state.session?.preferences ?? {};
   const [tab, setTab] = useState<"appearance" | "notifications" | "advanced">("appearance");
   const [keywords, setKeywords] = useState(((preferences as { keywords?: string[] }).keywords ?? []).join(", "));
@@ -594,11 +602,11 @@ export function PreferencesModal({ onClose }: { onClose: () => void }) {
   const set = (input: Record<string, unknown>) => void actions.updatePreferences(input);
 
   return (
-    <Modal title="Preferences" onClose={onClose} width={640}>
+    <Modal title={t("preferences.title")} onClose={onClose} width={640}>
       <div className="panel-tabs" role="tablist">
         {(["appearance", "notifications", "advanced"] as const).map((entry) => (
           <button key={entry} type="button" role="tab" aria-selected={tab === entry} className={tab === entry ? "is-active" : ""} onClick={() => setTab(entry)}>
-            {entry === "appearance" ? "Appearance" : entry === "notifications" ? "Notifications" : "Advanced"}
+            {entry === "appearance" ? t("preferences.appearance") : entry === "notifications" ? t("common.notifications") : t("preferences.advanced")}
           </button>
         ))}
       </div>
@@ -606,32 +614,42 @@ export function PreferencesModal({ onClose }: { onClose: () => void }) {
       {tab === "appearance" ? (
         <div className="stack-form">
           <label className="field">
-            Theme
+            {t("preferences.theme")}
             <select value={preferences.theme ?? "system"} onChange={(event) => set({ theme: event.target.value })}>
-              <option value="system">Match system</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
+              <option value="system">{t("preferences.matchSystem")}</option>
+              <option value="light">{t("preferences.light")}</option>
+              <option value="dark">{t("preferences.dark")}</option>
             </select>
           </label>
           <label className="field">
-            Message density
+            {t("preferences.language")}
+            <select value={preferences.language ?? "system"} onChange={(event) => set({ language: event.target.value })}>
+              {languageOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            {t("preferences.messageDensity")}
             <select value={preferences.messageDensity ?? "comfortable"} onChange={(event) => set({ messageDensity: event.target.value })}>
-              <option value="comfortable">Comfortable</option>
-              <option value="compact">Compact</option>
+              <option value="comfortable">{t("preferences.comfortable")}</option>
+              <option value="compact">{t("preferences.compact")}</option>
             </select>
           </label>
           <label className="field">
-            Time format
+            {t("preferences.timeFormat")}
             <select value={preferences.timeFormat ?? "12h"} onChange={(event) => set({ timeFormat: event.target.value })}>
-              <option value="12h">12-hour</option>
-              <option value="24h">24-hour</option>
+              <option value="12h">{t("preferences.hour12")}</option>
+              <option value="24h">{t("preferences.hour24")}</option>
             </select>
           </label>
           <label className="checkbox-field">
             <input type="checkbox" checked={preferences.enterToSend !== false} onChange={(event) => set({ enterToSend: event.target.checked })} />
             <span>
-              <strong>Press Enter to send</strong>
-              <small>When off, use Cmd/Ctrl+Enter to send.</small>
+              <strong>{t("preferences.enterToSend")}</strong>
+              <small>{t("preferences.enterToSendHint")}</small>
             </span>
           </label>
         </div>
@@ -640,30 +658,30 @@ export function PreferencesModal({ onClose }: { onClose: () => void }) {
       {tab === "notifications" ? (
         <div className="stack-form">
           <label className="field">
-            Desktop notifications
+            {t("preferences.desktopNotifications")}
             <select value={preferences.desktopNotifications ?? "mentions"} onChange={(event) => set({ desktopNotifications: event.target.value })}>
-              <option value="all">Every new message</option>
-              <option value="mentions">Direct messages and mentions</option>
-              <option value="none">Nothing</option>
+              <option value="all">{t("common.everyNewMessage")}</option>
+              <option value="mentions">{t("common.directMessagesAndMentions")}</option>
+              <option value="none">{t("common.nothing")}</option>
             </select>
           </label>
           <label className="field">
-            Email notifications
+            {t("preferences.emailNotifications")}
             <select value={preferences.emailNotifications ?? "mentions"} onChange={(event) => set({ emailNotifications: event.target.value })}>
-              <option value="all">Everything I miss</option>
-              <option value="mentions">Direct messages and mentions</option>
-              <option value="none">Nothing</option>
+              <option value="all">{t("preferences.everythingMissed")}</option>
+              <option value="mentions">{t("common.directMessagesAndMentions")}</option>
+              <option value="none">{t("common.nothing")}</option>
             </select>
           </label>
           <label className="checkbox-field">
             <input type="checkbox" checked={preferences.notificationSound !== false} onChange={(event) => set({ notificationSound: event.target.checked })} />
             <span>
-              <strong>Play a sound for new messages</strong>
-              <small>Follows the desktop setting above, and pauses during your notification schedule.</small>
+              <strong>{t("preferences.notificationSound")}</strong>
+              <small>{t("preferences.notificationSoundHint")}</small>
             </span>
           </label>
           <label className="field">
-            Highlight words
+            {t("preferences.highlightWords")}
             <input
               value={keywords}
               onChange={(event) => setKeywords(event.target.value)}
@@ -675,26 +693,26 @@ export function PreferencesModal({ onClose }: { onClose: () => void }) {
                     .filter(Boolean)
                 })
               }
-              placeholder="deploy, incident, roadmap"
+              placeholder={t("preferences.highlightPlaceholder")}
             />
           </label>
 
           <div className="field">
-            Notification schedule
-            <p className="muted small">Pause sounds, desktop alerts and email between these times.</p>
+            {t("preferences.notificationSchedule")}
+            <p className="muted small">{t("preferences.scheduleHint")}</p>
             <div className="inline-field">
               <input
                 type="time"
                 value={preferences.quietHoursStart ?? ""}
                 onChange={(event) => set({ quietHoursStart: event.target.value || null })}
-                aria-label="Quiet hours start"
+                aria-label={t("preferences.quietStart")}
               />
-              <span className="muted small">to</span>
+              <span className="muted small">{t("preferences.to")}</span>
               <input
                 type="time"
                 value={preferences.quietHoursEnd ?? ""}
                 onChange={(event) => set({ quietHoursEnd: event.target.value || null })}
-                aria-label="Quiet hours end"
+                aria-label={t("preferences.quietEnd")}
               />
               {preferences.quietHoursStart || preferences.quietHoursEnd ? (
                 <button
@@ -702,7 +720,7 @@ export function PreferencesModal({ onClose }: { onClose: () => void }) {
                   className="button ghost small"
                   onClick={() => set({ quietHoursStart: null, quietHoursEnd: null })}
                 >
-                  Clear
+                  {t("common.clear")}
                 </button>
               ) : null}
             </div>
@@ -713,10 +731,10 @@ export function PreferencesModal({ onClose }: { onClose: () => void }) {
             onClick={async () => {
               if (typeof Notification === "undefined") return;
               const permission = await Notification.requestPermission();
-              actions.toast(permission === "granted" ? "Desktop notifications enabled" : "Permission denied");
+              actions.toast(permission === "granted" ? t("preferences.browserNotificationsEnabled") : t("preferences.permissionDenied"));
             }}
           >
-            Enable browser notifications
+            {t("preferences.enableBrowserNotifications")}
           </button>
         </div>
       ) : null}
@@ -726,11 +744,11 @@ export function PreferencesModal({ onClose }: { onClose: () => void }) {
           <label className="checkbox-field">
             <input type="checkbox" checked={preferences.showUnreadsFirst === true} onChange={(event) => set({ showUnreadsFirst: event.target.checked })} />
             <span>
-              <strong>Sort the sidebar by unread first</strong>
+              <strong>{t("preferences.showUnreadsFirst")}</strong>
             </span>
           </label>
           <div className="field">
-            Sessions
+            {t("preferences.sessions")}
             <SessionList />
           </div>
         </div>
@@ -740,6 +758,7 @@ export function PreferencesModal({ onClose }: { onClose: () => void }) {
 }
 
 function SessionList() {
+  const { t } = useI18n();
   const [sessions, setSessions] = useState<Array<{ id: string; userAgent: string | null; createdAt: string }>>([]);
 
   useEffect(() => {
@@ -753,7 +772,7 @@ function SessionList() {
     <div className="session-list">
       {sessions.map((session) => (
         <div key={session.id} className="session-row">
-          <span>{session.userAgent?.slice(0, 60) ?? "Unknown device"}</span>
+          <span>{session.userAgent?.slice(0, 60) ?? t("app.unknownDevice")}</span>
           <button
             type="button"
             className="button ghost"
@@ -762,7 +781,7 @@ function SessionList() {
               setSessions((current) => current.filter((entry) => entry.id !== session.id));
             }}
           >
-            Revoke
+            {t("common.revoke")}
           </button>
         </div>
       ))}
@@ -786,6 +805,7 @@ export function ScheduleModal({
   onClose: () => void;
 }) {
   const { actions } = useApp();
+  const { t } = useI18n();
   const [when, setWhen] = useState(() => {
     const date = new Date(Date.now() + 60 * 60_000);
     date.setSeconds(0, 0);
@@ -793,13 +813,13 @@ export function ScheduleModal({
   });
 
   return (
-    <Modal title="Schedule message" onClose={onClose}>
-      <p className="muted">This message will be sent automatically at the time you pick.</p>
+    <Modal title={t("modals.scheduleMessage")} onClose={onClose}>
+      <p className="muted">{t("modals.scheduleHint")}</p>
       <blockquote className="schedule-preview">
         <RichText text={bodyText} />
       </blockquote>
       <label className="field">
-        Send at
+        {t("modals.sendAt")}
         <input type="datetime-local" value={when} onChange={(event) => setWhen(event.target.value)} />
       </label>
       <button
@@ -813,14 +833,14 @@ export function ScheduleModal({
               parentMessageId
             });
             track("message_scheduled", {});
-            actions.toast("Message scheduled", "success");
+            actions.toast(t("modals.messageScheduled"), "success");
             onClose();
           } catch (error) {
             actions.fail(error);
           }
         }}
       >
-        Schedule
+        {t("modals.schedule")}
       </button>
     </Modal>
   );
@@ -828,16 +848,17 @@ export function ScheduleModal({
 
 export function ShareModal({ messageId, onClose }: { messageId: string; onClose: () => void }) {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const directory = useDirectory();
   const [target, setTarget] = useState("");
   const [comment, setComment] = useState("");
 
   return (
-    <Modal title="Share message" onClose={onClose}>
+    <Modal title={t("modals.shareMessage")} onClose={onClose}>
       <label className="field">
-        Share to
+        {t("modals.shareTo")}
         <select value={target} onChange={(event) => setTarget(event.target.value)}>
-          <option value="">Pick a conversation</option>
+          <option value="">{t("modals.pickConversation")}</option>
           {(state.bootstrap?.conversations ?? []).map((conversation) => (
             <option key={conversation.id} value={conversation.id}>
               {conversation.channel ? `#${conversation.channel.name}` : conversationTitle(conversation, directory, state.session?.id)}
@@ -846,7 +867,7 @@ export function ShareModal({ messageId, onClose }: { messageId: string; onClose:
         </select>
       </label>
       <label className="field">
-        Add a comment <span className="optional">(optional)</span>
+        {t("modals.addComment")} <span className="optional">{t("modals.optional")}</span>
         <textarea value={comment} onChange={(event) => setComment(event.target.value)} rows={3} />
       </label>
       <button
@@ -863,7 +884,7 @@ export function ShareModal({ messageId, onClose }: { messageId: string; onClose:
           }
         }}
       >
-        Share
+        {t("modals.share")}
       </button>
     </Modal>
   );
@@ -873,29 +894,30 @@ export function ShareModal({ messageId, onClose }: { messageId: string; onClose:
 /* Shortcuts and workspace creation                                            */
 /* -------------------------------------------------------------------------- */
 
-const SHORTCUTS: Array<[string, string]> = [
-  ["⌘K / Ctrl+K", "Jump to a conversation or person"],
-  ["⌘/ / Ctrl+/", "Show this shortcut list"],
-  ["⌘⇧K", "Start a direct message"],
-  ["⌘⇧A", "Go to all unreads"],
-  ["⌘⇧T", "Go to threads"],
-  ["Alt+↑ / Alt+↓", "Previous or next conversation"],
-  ["⇧Esc", "Mark everything read"],
-  ["⌘B / ⌘I", "Bold or italic in the composer"],
-  ["Enter", "Send the message"],
-  ["Shift+Enter", "New line"],
-  ["↑", "Edit your last message"],
-  ["Esc", "Close the panel, modal or thread"]
-];
+const SHORTCUTS = [
+  ["⌘K / Ctrl+K", "modals.jumpConversation"],
+  ["⌘/ / Ctrl+/", "modals.showShortcuts"],
+  ["⌘⇧K", "modals.startDirectMessage"],
+  ["⌘⇧A", "modals.goUnreads"],
+  ["⌘⇧T", "modals.goThreads"],
+  ["Alt+↑ / Alt+↓", "modals.previousNextConversation"],
+  ["⇧Esc", "modals.markEverythingRead"],
+  ["⌘B / ⌘I", "modals.boldItalic"],
+  ["Enter", "modals.sendMessage"],
+  ["Shift+Enter", "modals.newLine"],
+  ["↑", "modals.editLastMessage"],
+  ["Esc", "modals.closePanelModalThread"]
+] as const;
 
 export function ShortcutsModal({ onClose }: { onClose: () => void }) {
+  const { t } = useI18n();
   return (
-    <Modal title="Keyboard shortcuts" onClose={onClose}>
+    <Modal title={t("modals.keyboardShortcuts")} onClose={onClose}>
       <ul className="shortcut-list">
         {SHORTCUTS.map(([keys, description]) => (
           <li key={keys}>
             <kbd>{keys}</kbd>
-            <span>{description}</span>
+            <span>{t(description)}</span>
           </li>
         ))}
       </ul>
@@ -905,10 +927,11 @@ export function ShortcutsModal({ onClose }: { onClose: () => void }) {
 
 export function CreateWorkspaceModal({ onClose }: { onClose: () => void }) {
   const { actions } = useApp();
+  const { t } = useI18n();
   const [name, setName] = useState("");
 
   return (
-    <Modal title="Create a workspace" onClose={onClose}>
+    <Modal title={t("workspaceRail.createWorkspace")} onClose={onClose}>
       <form
         className="stack-form"
         onSubmit={async (event) => {
@@ -926,11 +949,11 @@ export function CreateWorkspaceModal({ onClose }: { onClose: () => void }) {
         }}
       >
         <label className="field">
-          Workspace name
+          {t("auth.workspaceName")}
           <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Acme Inc" required autoFocus />
         </label>
         <button type="submit" className="button primary" disabled={name.trim().length < 2}>
-          Create workspace
+          {t("auth.createWorkspace")}
         </button>
       </form>
     </Modal>

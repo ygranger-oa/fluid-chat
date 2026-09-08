@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Hash, Lock, Search, Users } from "lucide-react";
+import { useI18n } from "../../i18n";
 import { conversationTitle, useApp, useDirectory } from "../../store";
 import { Avatar, Modal } from "../ui/primitives";
 
@@ -10,6 +11,7 @@ type Entry = { id: string; label: string; hint?: string; run: () => void; icon: 
 /** ⌘K: jump to any conversation, person, or view without leaving the keyboard. */
 export function QuickSwitcher({ onClose }: { onClose: () => void }) {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const directory = useDirectory();
   const [query, setQuery] = useState("");
   const [index, setIndex] = useState(0);
@@ -39,7 +41,7 @@ export function QuickSwitcher({ onClose }: { onClose: () => void }) {
       list.push({
         id: channel.id,
         label: `#${channel.name}`,
-        hint: "Not joined",
+        hint: t("quickSwitcher.notJoined"),
         icon: <Hash size={15} />,
         run: () => void actions.openConversation(channel.conversationId)
       });
@@ -62,20 +64,20 @@ export function QuickSwitcher({ onClose }: { onClose: () => void }) {
       });
     }
     const views: Array<[string, () => void]> = [
-      ["Go to Threads", () => actions.setView({ kind: "threads" })],
-      ["Go to Activity", () => actions.setView({ kind: "activity" })],
-      ["Go to All unreads", () => actions.setView({ kind: "unreads" })],
-      ["Go to Drafts & sent", () => actions.setView({ kind: "drafts" })],
-      ["Go to Later", () => actions.setView({ kind: "saved" })],
-      ["Browse channels", () => actions.setView({ kind: "browse" })],
-      ["Open preferences", () => actions.setModal({ kind: "preferences" })],
-      ["Invite people", () => actions.setModal({ kind: "invite" })]
+      [t("quickSwitcher.goTo", { view: t("sidebar.threads") }), () => actions.setView({ kind: "threads" })],
+      [t("quickSwitcher.goTo", { view: t("sidebar.activity") }), () => actions.setView({ kind: "activity" })],
+      [t("quickSwitcher.goTo", { view: t("sidebar.allUnreads") }), () => actions.setView({ kind: "unreads" })],
+      [t("quickSwitcher.goTo", { view: t("sidebar.draftsSent") }), () => actions.setView({ kind: "drafts" })],
+      [t("quickSwitcher.goTo", { view: t("sidebar.later") }), () => actions.setView({ kind: "saved" })],
+      [t("sidebar.browseChannels"), () => actions.setView({ kind: "browse" })],
+      [t("quickSwitcher.openPreferences"), () => actions.setModal({ kind: "preferences" })],
+      [t("sidebar.invitePeople"), () => actions.setModal({ kind: "invite" })]
     ];
     for (const [label, run] of views) {
       list.push({ id: label, label, icon: <Search size={14} />, run });
     }
     return list;
-  }, [actions, directory, state.bootstrap, state.session?.id, state.workspaceId]);
+  }, [actions, directory, state.bootstrap, state.session?.id, state.workspaceId, t]);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase().replace(/^[#@]/, "");
@@ -86,7 +88,7 @@ export function QuickSwitcher({ onClose }: { onClose: () => void }) {
   useEffect(() => setIndex(0), [query]);
 
   return (
-    <Modal title="Jump to" onClose={onClose} width={560} align="top">
+    <Modal title={t("quickSwitcher.jumpTo")} onClose={onClose} width={560} align="top">
       <div className="quick-switcher">
         <div className="search-field">
           <Search size={16} />
@@ -94,7 +96,7 @@ export function QuickSwitcher({ onClose }: { onClose: () => void }) {
             autoFocus
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search channels, people and commands"
+            placeholder={t("quickSwitcher.search")}
             onKeyDown={(event) => {
               if (event.key === "ArrowDown") {
                 event.preventDefault();
@@ -132,7 +134,7 @@ export function QuickSwitcher({ onClose }: { onClose: () => void }) {
               </button>
             </li>
           ))}
-          {filtered.length === 0 ? <li className="quick-empty">Nothing matches “{query}”.</li> : null}
+          {filtered.length === 0 ? <li className="quick-empty">{t("quickSwitcher.nothingMatches", { query })}</li> : null}
         </ul>
       </div>
     </Modal>

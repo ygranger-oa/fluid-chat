@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { api, ApiError } from "../api";
 import { identifyUser, track } from "../analytics";
+import { useI18n } from "../i18n";
 import { useApp } from "../store";
 
 export function AuthScreen() {
   const { actions } = useApp();
+  const { t } = useI18n();
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,8 +25,8 @@ export function AuthScreen() {
         const { resetToken } = await api.auth.forgotPassword(email);
         setNotice(
           resetToken
-            ? `Email is not configured on this server, so here is your reset link: /reset-password/${resetToken}`
-            : "If that email exists, a reset link is on its way."
+            ? t("auth.resetLinkFallback", { token: resetToken })
+            : t("auth.resetSent")
         );
         setBusy(false);
         return;
@@ -40,7 +42,7 @@ export function AuthScreen() {
       track(mode === "signup" ? "signed_up" : "signed_in", { workspace_count: result.workspaces.length });
       if (result.workspaces[0]) await actions.selectWorkspace(result.workspaces[0].workspace.id);
     } catch (error) {
-      setNotice(error instanceof ApiError ? error.message : "Something went wrong");
+      setNotice(error instanceof ApiError ? error.message : t("auth.genericError"));
     } finally {
       setBusy(false);
     }
@@ -50,37 +52,35 @@ export function AuthScreen() {
     <main className="auth-page">
       <section className="auth-hero">
         <p className="eyebrow">Fluid Chat</p>
-        <h1>Where work happens, on your own terms.</h1>
-        <p className="lede">
-          Channels, direct messages, threads, search, files and reactions — self-hosted, exportable and yours.
-        </p>
+        <h1>{t("auth.headline")}</h1>
+        <p className="lede">{t("auth.lede")}</p>
         <ul className="auth-points">
-          <li>Organized conversations in public and private channels</li>
-          <li>Threads, mentions, reactions, pins and saved items</li>
-          <li>Realtime presence, typing indicators and unread tracking</li>
-          <li>Full-text search across everything you can see</li>
+          <li>{t("auth.points.channels")}</li>
+          <li>{t("auth.points.threads")}</li>
+          <li>{t("auth.points.presence")}</li>
+          <li>{t("auth.points.search")}</li>
         </ul>
       </section>
 
       <section className="auth-panel">
         <div className="segmented">
           <button type="button" className={mode === "login" ? "is-active" : ""} onClick={() => setMode("login")}>
-            Sign in
+            {t("auth.signIn")}
           </button>
           <button type="button" className={mode === "signup" ? "is-active" : ""} onClick={() => setMode("signup")}>
-            Create account
+            {t("auth.createAccount")}
           </button>
         </div>
 
         <form className="stack-form" onSubmit={submit}>
           {mode === "signup" ? (
             <label className="field">
-              Full name
+              {t("auth.fullName")}
               <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required autoComplete="name" />
             </label>
           ) : null}
           <label className="field">
-            Email
+            {t("auth.email")}
             <input
               type="email"
               value={email}
@@ -92,7 +92,7 @@ export function AuthScreen() {
           </label>
           {mode !== "forgot" ? (
             <label className="field">
-              Password
+              {t("auth.password")}
               <input
                 type="password"
                 value={password}
@@ -105,17 +105,17 @@ export function AuthScreen() {
           ) : null}
 
           <button type="submit" className="button primary" disabled={busy}>
-            {mode === "signup" ? "Create account" : mode === "forgot" ? "Send reset link" : "Sign in"}
+            {mode === "signup" ? t("auth.createAccount") : mode === "forgot" ? t("auth.sendResetLink") : t("auth.signIn")}
           </button>
 
           {mode === "login" ? (
             <button type="button" className="link-button" onClick={() => setMode("forgot")}>
-              Forgot your password?
+              {t("auth.forgotPassword")}
             </button>
           ) : null}
           {mode === "forgot" ? (
             <button type="button" className="link-button" onClick={() => setMode("login")}>
-              Back to sign in
+              {t("auth.backToSignIn")}
             </button>
           ) : null}
           {notice ? <p className="notice">{notice}</p> : null}
@@ -127,17 +127,16 @@ export function AuthScreen() {
 
 export function WorkspaceSetupScreen() {
   const { state, actions } = useApp();
+  const { t } = useI18n();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
 
   return (
     <main className="auth-page">
       <section className="auth-hero">
-        <p className="eyebrow">Welcome, {state.session?.displayName}</p>
-        <h1>Create your first workspace.</h1>
-        <p className="lede">
-          A workspace holds your channels, people and history. You can create more later, or join one from an invite link.
-        </p>
+        <p className="eyebrow">{t("auth.welcome", { name: state.session?.displayName ?? "" })}</p>
+        <h1>{t("auth.createFirstWorkspace")}</h1>
+        <p className="lede">{t("auth.workspaceLede")}</p>
       </section>
       <section className="auth-panel">
         <form
@@ -159,14 +158,14 @@ export function WorkspaceSetupScreen() {
           }}
         >
           <label className="field">
-            Workspace name
+            {t("auth.workspaceName")}
             <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Acme Inc" required autoFocus />
           </label>
           <button type="submit" className="button primary" disabled={busy || name.trim().length < 2}>
-            Create workspace
+            {t("auth.createWorkspace")}
           </button>
           <button type="button" className="link-button" onClick={() => void actions.signOut()}>
-            Sign out
+            {t("auth.signOut")}
           </button>
         </form>
       </section>

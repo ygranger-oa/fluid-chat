@@ -540,6 +540,7 @@ export const exportJobs = pgTable("export_jobs", {
 
 export type UserPreferences = {
   theme?: "light" | "dark" | "system";
+  language?: "system" | "en" | "fr";
   messageDensity?: "comfortable" | "compact";
   timeFormat?: "12h" | "24h";
   enterToSend?: boolean;
