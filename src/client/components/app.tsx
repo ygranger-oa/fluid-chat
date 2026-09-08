@@ -43,6 +43,7 @@ function AppRoot() {
   useTheme();
   useHotkeys();
   useDesktopNotifications();
+  useAppBadge();
   useDeepLink();
 
   if (state.status === "loading") {
@@ -328,6 +329,28 @@ function useDesktopNotifications() {
       };
     }
   }, [notifications, preference, paused]);
+}
+
+type BadgeNavigator = Navigator & {
+  setAppBadge?: (contents?: number) => Promise<void>;
+  clearAppBadge?: () => Promise<void>;
+};
+
+/** Mirrors unread message count to the installed PWA icon when the browser supports it. */
+function useAppBadge() {
+  const { state } = useApp();
+  const unreadMessages =
+    state.status === "ready"
+      ? state.bootstrap?.conversations.reduce((total, conversation) => total + conversation.unreadCount, 0) ?? 0
+      : 0;
+
+  useEffect(() => {
+    const badgeNavigator = navigator as BadgeNavigator;
+    if (!badgeNavigator.setAppBadge || !badgeNavigator.clearAppBadge) return;
+
+    const update = unreadMessages > 0 ? badgeNavigator.setAppBadge(unreadMessages) : badgeNavigator.clearAppBadge();
+    void update.catch(() => undefined);
+  }, [unreadMessages]);
 }
 
 /** `/?conversation=…&message=…` opens a permalink from a copied message link. */
