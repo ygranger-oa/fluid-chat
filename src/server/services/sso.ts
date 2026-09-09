@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
+import type { Workspace } from "@/db/schema";
 import {
   auditEvents,
   channels,
@@ -35,8 +36,21 @@ type UserInfo = {
   picture?: string;
 };
 
-export function ssoConfigured() {
-  return !!(process.env.AUTHENTIK_ISSUER && process.env.AUTHENTIK_CLIENT_ID && process.env.AUTHENTIK_CLIENT_SECRET);
+type SsoConfig = {
+  issuer: string;
+  clientId: string;
+  clientSecret: string;
+  scopes: string;
+};
+
+export async function ssoConfigured() {
+  if (envSsoConfig()) return true;
+  const [workspace] = await db
+    .select({ id: workspaces.id })
+    .from(workspaces)
+    .where(and(eq(workspaces.ssoEnabled, true), isNull(workspaces.deletedAt)))
+    .limit(1);
+  return !!workspace;
 }
 
 export function ssoCallbackUrl() {
@@ -44,11 +58,12 @@ export function ssoCallbackUrl() {
 }
 
 export async function ssoLoginUrl(workspaceId: string | undefined, redirectTo?: string) {
-  if (!ssoConfigured()) throw new HttpError(503, "SSO is not configured", "sso_not_configured");
   const workspace = workspaceId ? await enabledSsoWorkspace(workspaceId) : await publicLoginSsoWorkspace();
   if (!workspace) throw new HttpError(404, "SSO is not enabled for this workspace", "sso_workspace_disabled");
+  const config = ssoConfigFor(workspace);
+  if (!config) throw new HttpError(503, "SSO is not configured for this workspace", "sso_not_configured");
 
-  const discovery = await oidcDiscovery();
+  const discovery = await oidcDiscovery(config);
   const state = randomToken();
   const codeVerifier = randomToken(64);
   await db.insert(ssoStates).values({
@@ -60,10 +75,10 @@ export async function ssoLoginUrl(workspaceId: string | undefined, redirectTo?: 
   });
 
   const url = new URL(discovery.authorization_endpoint);
-  url.searchParams.set("client_id", process.env.AUTHENTIK_CLIENT_ID!);
+  url.searchParams.set("client_id", config.clientId);
   url.searchParams.set("redirect_uri", ssoCallbackUrl());
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", process.env.AUTHENTIK_SCOPES ?? "openid email profile");
+  url.searchParams.set("scope", config.scopes);
   url.searchParams.set("state", state);
   url.searchParams.set("code_challenge", base64Url(createHash("sha256").update(codeVerifier).digest()));
   url.searchParams.set("code_challenge_method", "S256");
@@ -71,7 +86,6 @@ export async function ssoLoginUrl(workspaceId: string | undefined, redirectTo?: 
 }
 
 export async function publicSsoAvailable() {
-  if (!ssoConfigured()) return false;
   return !!(await publicLoginSsoWorkspace());
 }
 
@@ -81,7 +95,6 @@ export async function completeSsoLogin(input: {
   userAgent?: string | null;
   ipAddress?: string | null;
 }) {
-  if (!ssoConfigured()) throw new HttpError(503, "SSO is not configured", "sso_not_configured");
   const [stateRecord] = await db
     .select()
     .from(ssoStates)
@@ -91,8 +104,16 @@ export async function completeSsoLogin(input: {
     throw new HttpError(400, "SSO state is invalid or expired", "invalid_sso_state");
   }
 
-  const discovery = await oidcDiscovery();
-  const tokenResponse = await exchangeCode(discovery, input.code, stateRecord.codeVerifier);
+  const [stateWorkspace] = await db
+    .select()
+    .from(workspaces)
+    .where(and(eq(workspaces.id, stateRecord.workspaceId), eq(workspaces.ssoEnabled, true), isNull(workspaces.deletedAt)))
+    .limit(1);
+  const config = stateWorkspace ? ssoConfigFor(stateWorkspace) : null;
+  if (!config) throw new HttpError(503, "SSO is not configured for this workspace", "sso_not_configured");
+
+  const discovery = await oidcDiscovery(config);
+  const tokenResponse = await exchangeCode(discovery, config, input.code, stateRecord.codeVerifier);
   const profile = await fetchUserInfo(discovery.userinfo_endpoint, tokenResponse.access_token);
   if (!profile.sub || !profile.email) throw new HttpError(400, "SSO profile is missing an email", "invalid_sso_profile");
 
@@ -206,10 +227,8 @@ export async function completeSsoLogin(input: {
   return { user, workspaceId: stateRecord.workspaceId, redirectTo: stateRecord.redirectTo };
 }
 
-async function oidcDiscovery(): Promise<Discovery> {
-  const issuer = process.env.AUTHENTIK_ISSUER?.replace(/\/$/, "");
-  if (!issuer) throw new HttpError(503, "SSO issuer is not configured", "sso_not_configured");
-  const response = await fetch(`${issuer}/.well-known/openid-configuration`, { cache: "no-store" });
+async function oidcDiscovery(config: SsoConfig): Promise<Discovery> {
+  const response = await fetch(`${config.issuer}/.well-known/openid-configuration`, { cache: "no-store" });
   if (!response.ok) throw new HttpError(502, "SSO provider discovery failed", "sso_discovery_failed");
   const discovery = (await response.json()) as Discovery;
   if (!discovery.authorization_endpoint || !discovery.token_endpoint || !discovery.userinfo_endpoint) {
@@ -218,13 +237,13 @@ async function oidcDiscovery(): Promise<Discovery> {
   return discovery;
 }
 
-async function exchangeCode(discovery: Discovery, code: string, codeVerifier: string) {
+async function exchangeCode(discovery: Discovery, config: SsoConfig, code: string, codeVerifier: string) {
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     code,
     redirect_uri: ssoCallbackUrl(),
-    client_id: process.env.AUTHENTIK_CLIENT_ID!,
-    client_secret: process.env.AUTHENTIK_CLIENT_SECRET!,
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
     code_verifier: codeVerifier
   });
   const response = await fetch(discovery.token_endpoint, {
@@ -292,4 +311,18 @@ async function publicLoginSsoWorkspace() {
     .orderBy(workspaces.name)
     .limit(1);
   return workspace ?? null;
+}
+
+function ssoConfigFor(workspace: Workspace): SsoConfig | null {
+  const config = {
+    issuer: (workspace.ssoIssuer ?? process.env.AUTHENTIK_ISSUER)?.trim().replace(/\/$/, "") ?? "",
+    clientId: (workspace.ssoClientId ?? process.env.AUTHENTIK_CLIENT_ID)?.trim() ?? "",
+    clientSecret: (workspace.ssoClientSecret ?? process.env.AUTHENTIK_CLIENT_SECRET)?.trim() ?? "",
+    scopes: (workspace.ssoScopes ?? process.env.AUTHENTIK_SCOPES ?? "openid email profile").trim()
+  };
+  return config.issuer && config.clientId && config.clientSecret ? config : null;
+}
+
+function envSsoConfig() {
+  return !!(process.env.AUTHENTIK_ISSUER && process.env.AUTHENTIK_CLIENT_ID && process.env.AUTHENTIK_CLIENT_SECRET);
 }

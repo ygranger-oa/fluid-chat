@@ -44,6 +44,10 @@ export type WorkspaceSummary = {
   ssoEnabled: boolean;
   ssoShowOnLogin: boolean;
   ssoAutoJoinRole: WorkspaceRoleName;
+  ssoIssuer: string | null;
+  ssoClientId: string | null;
+  ssoClientSecretSet: boolean;
+  ssoScopes: string | null;
   retentionDays: number | null;
 };
 

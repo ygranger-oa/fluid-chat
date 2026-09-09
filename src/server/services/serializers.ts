@@ -102,6 +102,10 @@ export function toWorkspaceSummary(workspace: Workspace): WorkspaceSummary {
     ssoEnabled: workspace.ssoEnabled,
     ssoShowOnLogin: workspace.ssoShowOnLogin,
     ssoAutoJoinRole: workspace.ssoAutoJoinRole,
+    ssoIssuer: workspace.ssoIssuer,
+    ssoClientId: workspace.ssoClientId,
+    ssoClientSecretSet: !!workspace.ssoClientSecret,
+    ssoScopes: workspace.ssoScopes,
     retentionDays: workspace.retentionDays
   };
 }

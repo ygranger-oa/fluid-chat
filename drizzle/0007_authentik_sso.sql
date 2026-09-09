@@ -1,6 +1,10 @@
 ALTER TABLE "workspaces" ADD COLUMN "sso_enabled" boolean DEFAULT false NOT NULL;--> statement-breakpoint
 ALTER TABLE "workspaces" ADD COLUMN "sso_show_on_login" boolean DEFAULT false NOT NULL;--> statement-breakpoint
 ALTER TABLE "workspaces" ADD COLUMN "sso_auto_join_role" "workspace_role" DEFAULT 'member' NOT NULL;--> statement-breakpoint
+ALTER TABLE "workspaces" ADD COLUMN "sso_issuer" text;--> statement-breakpoint
+ALTER TABLE "workspaces" ADD COLUMN "sso_client_id" text;--> statement-breakpoint
+ALTER TABLE "workspaces" ADD COLUMN "sso_client_secret" text;--> statement-breakpoint
+ALTER TABLE "workspaces" ADD COLUMN "sso_scopes" text;--> statement-breakpoint
 CREATE TABLE "sso_accounts" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"provider" text DEFAULT 'authentik' NOT NULL,

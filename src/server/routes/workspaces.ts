@@ -39,6 +39,10 @@ const settingsSchema = z.object({
   ssoEnabled: z.boolean().optional(),
   ssoShowOnLogin: z.boolean().optional(),
   ssoAutoJoinRole: z.enum(["admin", "member", "guest"]).optional(),
+  ssoIssuer: z.string().url().max(500).nullable().optional(),
+  ssoClientId: z.string().max(300).nullable().optional(),
+  ssoClientSecret: z.string().max(1000).nullable().optional(),
+  ssoScopes: z.string().max(300).nullable().optional(),
   retentionDays: z.number().int().min(1).max(3650).nullable().optional(),
   plan: z.enum(["free", "starter", "team", "business"]).optional(),
   seatLimit: z.number().int().positive().optional(),
@@ -57,7 +61,11 @@ const ownerOnlyFields = [
   "readOnlyAt",
   "ssoEnabled",
   "ssoShowOnLogin",
-  "ssoAutoJoinRole"
+  "ssoAutoJoinRole",
+  "ssoIssuer",
+  "ssoClientId",
+  "ssoClientSecret",
+  "ssoScopes"
 ] as const;
 
 export const workspaceRoutes = defineRoutes({
@@ -124,17 +132,26 @@ export const workspaceRoutes = defineRoutes({
     if (ownerOnlyFields.some((field) => input[field] !== undefined)) {
       await requireWorkspaceOwner(workspaceId, user.id);
     }
+    const update = {
+      ...input,
+      ssoEnabled: input.ssoShowOnLogin === true ? true : input.ssoEnabled,
+      ssoShowOnLogin: input.ssoEnabled === false ? false : input.ssoShowOnLogin,
+      ssoIssuer: input.ssoIssuer === undefined ? undefined : input.ssoIssuer?.trim().replace(/\/$/, "") || null,
+      ssoClientId: input.ssoClientId === undefined ? undefined : input.ssoClientId?.trim() || null,
+      ssoClientSecret: input.ssoClientSecret === undefined ? undefined : input.ssoClientSecret?.trim() || null,
+      ssoScopes: input.ssoScopes === undefined ? undefined : input.ssoScopes?.trim() || null
+    };
     const [workspace] = await db.transaction(async (tx) => {
       if (input.ssoShowOnLogin === true) {
         await tx.update(workspaces).set({ ssoShowOnLogin: false }).where(eq(workspaces.ssoShowOnLogin, true));
       }
       return tx
         .update(workspaces)
-        .set({ ...input, updatedAt: new Date() })
+        .set({ ...update, updatedAt: new Date() })
         .where(eq(workspaces.id, workspaceId))
         .returning();
     });
-    await createAudit(workspaceId, user.id, "workspace.updated", "workspace", workspaceId, input);
+    await createAudit(workspaceId, user.id, "workspace.updated", "workspace", workspaceId, redactedSettings(input));
     return { workspace: toWorkspaceSummary(workspace) };
   },
 
@@ -546,4 +563,9 @@ async function assertAnotherOwnerExists(workspaceId: string) {
       )
     );
   if (value <= 1) throw new HttpError(400, "A workspace must always have an owner", "last_owner");
+}
+
+function redactedSettings(input: z.infer<typeof settingsSchema>) {
+  if (input.ssoClientSecret === undefined) return input;
+  return { ...input, ssoClientSecret: input.ssoClientSecret ? "[redacted]" : null };
 }

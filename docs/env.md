@@ -69,7 +69,8 @@ provider with this redirect URI:
 $APP_URL/api/auth/sso/callback
 ```
 
-Then set:
+These values can be set directly in each workspace's settings. Environment variables are still
+supported as instance-wide fallback values:
 
 ```text
 AUTHENTIK_ISSUER          Authentik issuer URL, for example https://auth.example.com/application/o/fluid-chat
@@ -78,9 +79,10 @@ AUTHENTIK_CLIENT_SECRET   OIDC client secret.
 AUTHENTIK_SCOPES          Optional scopes, default: openid email profile.
 ```
 
-Workspace owners can enable SSO in workspace settings. The displayed SSO login URL includes that
-workspace ID; users signing in through it are created when absent, linked by OIDC issuer/subject,
-and automatically added to the selected workspace with the configured role.
+Workspace owners can configure and enable SSO in workspace settings: issuer URL, client ID, client
+secret, scopes, global sign-in visibility and auto-join role. The displayed SSO login URL includes
+that workspace ID; users signing in through it are created when absent, linked by OIDC
+issuer/subject, and automatically added to the selected workspace with the configured role.
 
 Owners can also choose to show that SSO on the global sign-in screen. In that mode `/api/auth/sso/start`
 works without a `workspaceId` query parameter and uses the configured workspace as the target; this

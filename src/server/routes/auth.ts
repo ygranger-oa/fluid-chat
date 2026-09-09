@@ -129,7 +129,7 @@ export const authRoutes = defineRoutes({
 
   "GET /auth/me": async (ctx) => {
     const user = await ctx.optionalUser();
-    const sso = { enabled: ssoConfigured(), showOnLogin: await publicSsoAvailable() };
+    const sso = { enabled: await ssoConfigured(), showOnLogin: await publicSsoAvailable() };
     if (!user) return { user: null, workspaces: [], sso };
     return { user: toSessionUser(user), workspaces: await membershipsFor(user.id), sso };
   },

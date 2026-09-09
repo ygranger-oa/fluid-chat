@@ -659,6 +659,10 @@ function Settings({ workspaceId, isOwner }: { workspaceId: string; isOwner: bool
     ssoEnabled: workspace?.ssoEnabled ?? false,
     ssoShowOnLogin: workspace?.ssoShowOnLogin ?? false,
     ssoAutoJoinRole: workspace?.ssoAutoJoinRole ?? "member",
+    ssoIssuer: workspace?.ssoIssuer ?? "",
+    ssoClientId: workspace?.ssoClientId ?? "",
+    ssoClientSecret: "",
+    ssoScopes: workspace?.ssoScopes ?? "openid email profile",
     retentionDays: workspace?.retentionDays ?? ""
   });
   const ssoUrl = typeof window === "undefined" ? "" : `${window.location.origin}/?workspaceId=${workspaceId}`;
@@ -669,7 +673,7 @@ function Settings({ workspaceId, isOwner }: { workspaceId: string; isOwner: bool
       onSubmit={async (event) => {
         event.preventDefault();
         try {
-          await api.workspaces.update(workspaceId, {
+          const update: Record<string, unknown> = {
             name: form.name,
             description: form.description || null,
             iconEmoji: form.iconEmoji || null,
@@ -678,8 +682,13 @@ function Settings({ workspaceId, isOwner }: { workspaceId: string; isOwner: bool
             ssoEnabled: form.ssoEnabled,
             ssoShowOnLogin: form.ssoShowOnLogin,
             ssoAutoJoinRole: form.ssoAutoJoinRole,
+            ssoIssuer: form.ssoIssuer || null,
+            ssoClientId: form.ssoClientId || null,
+            ssoScopes: form.ssoScopes || null,
             retentionDays: form.retentionDays === "" ? null : Number(form.retentionDays)
-          });
+          };
+          if (form.ssoClientSecret.trim()) update.ssoClientSecret = form.ssoClientSecret;
+          await api.workspaces.update(workspaceId, update);
           await actions.refreshBootstrap();
           actions.toast(t("admin.workspaceUpdated"), "success");
         } catch (error) {
@@ -727,14 +736,53 @@ function Settings({ workspaceId, isOwner }: { workspaceId: string; isOwner: bool
             />
           </label>
           <label className="checkbox-field">
-            <input type="checkbox" checked={form.ssoEnabled} onChange={(event) => setForm({ ...form, ssoEnabled: event.target.checked })} />
+            <input
+              type="checkbox"
+              checked={form.ssoEnabled}
+              onChange={(event) =>
+                setForm({ ...form, ssoEnabled: event.target.checked, ssoShowOnLogin: event.target.checked ? form.ssoShowOnLogin : false })
+              }
+            />
             <span>
               <strong>{t("admin.ssoEnabled")}</strong>
               <small>{t("admin.ssoEnabledHint")}</small>
             </span>
           </label>
+          <label className="field">
+            {t("admin.ssoIssuer")}
+            <input
+              type="url"
+              value={form.ssoIssuer}
+              onChange={(event) => setForm({ ...form, ssoIssuer: event.target.value })}
+              placeholder="https://auth.example.com/application/o/fluid-chat"
+            />
+          </label>
+          <label className="field">
+            {t("admin.ssoClientId")}
+            <input value={form.ssoClientId} onChange={(event) => setForm({ ...form, ssoClientId: event.target.value })} autoComplete="off" />
+          </label>
+          <label className="field">
+            {t("admin.ssoClientSecret")}
+            <input
+              type="password"
+              value={form.ssoClientSecret}
+              onChange={(event) => setForm({ ...form, ssoClientSecret: event.target.value })}
+              placeholder={workspace?.ssoClientSecretSet ? t("admin.ssoClientSecretConfigured") : ""}
+              autoComplete="new-password"
+            />
+          </label>
+          <label className="field">
+            {t("admin.ssoScopes")}
+            <input value={form.ssoScopes} onChange={(event) => setForm({ ...form, ssoScopes: event.target.value })} placeholder="openid email profile" />
+          </label>
           <label className="checkbox-field">
-            <input type="checkbox" checked={form.ssoShowOnLogin} onChange={(event) => setForm({ ...form, ssoShowOnLogin: event.target.checked })} />
+            <input
+              type="checkbox"
+              checked={form.ssoShowOnLogin}
+              onChange={(event) =>
+                setForm({ ...form, ssoShowOnLogin: event.target.checked, ssoEnabled: event.target.checked ? true : form.ssoEnabled })
+              }
+            />
             <span>
               <strong>{t("admin.ssoShowOnLogin")}</strong>
               <small>{t("admin.ssoShowOnLoginHint")}</small>
