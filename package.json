@@ -12,6 +12,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "import:mattermost": "node --env-file=.env --import tsx scripts/import-mattermost.ts",
     "storage:migrate-local": "node --env-file=.env --import tsx scripts/migrate-local-uploads.ts",
     "worker": "tsx worker/index.ts",
     "realtime": "tsx src/realtime/server.ts"

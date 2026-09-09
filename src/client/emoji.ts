@@ -437,13 +437,28 @@ const ALIASES: Record<string, string> = {
   raised_hand: "wave",
   party: "tada",
   ship: "rocket",
-  bug_fix: "bug"
+  bug_fix: "bug",
+  rolling_on_the_floor_laughing: "rofl",
+  smiling_face_with_tear: "sweat_smile",
+  mechanical_arm: "muscle",
+  sparkling_heart: "heart",
+  white_frowning_face: "slightly_frowning_face"
 };
+
+/** Slack/Mattermost shortcodes suffix a skin-tone variant onto the base name. */
+const SKIN_TONE_NAME_SUFFIX = /_(?:light|medium_light|medium|medium_dark|dark)_skin_tone$/;
 
 export function emojiChar(name: string, customEmoji?: Map<string, string>) {
   const key = name.toLowerCase();
   if (customEmoji?.has(key)) return undefined; // rendered as an image instead
-  return byName.get(key) ?? byName.get(ALIASES[key] ?? "") ?? undefined;
+  const base = key.replace(SKIN_TONE_NAME_SUFFIX, "");
+  return (
+    byName.get(key) ??
+    byName.get(base) ??
+    byName.get(ALIASES[key] ?? "") ??
+    byName.get(ALIASES[base] ?? "") ??
+    undefined
+  );
 }
 
 const TONE_SUFFIX = /[\u{1F3FB}-\u{1F3FF}]$/u;

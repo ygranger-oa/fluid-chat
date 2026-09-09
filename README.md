@@ -155,6 +155,7 @@ npm run build       # production build
 npm run start       # production server
 npm run realtime    # websocket server
 npm run worker      # background jobs
+npm run import:mattermost -- --workspace-slug <slug> --export <export.jsonl> [--attachments-dir <dir>]
 npm run test        # vitest unit suite
 npm run typecheck   # tsc --noEmit
 npm run db:generate # generate a migration from schema changes
