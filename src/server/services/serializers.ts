@@ -55,7 +55,10 @@ export function effectivePresence(user: Pick<User, "presence" | "lastActiveAt" |
   return user.presence;
 }
 
-export function toPublicUser(user: User): PublicUser {
+export function toPublicUser(
+  user: User,
+  options: { workspaceStatus?: PublicUser["workspaceStatus"] } = {}
+): PublicUser {
   const statusExpired = user.statusExpiresAt ? new Date(user.statusExpiresAt).getTime() < Date.now() : false;
   return {
     id: user.id,
@@ -72,7 +75,8 @@ export function toPublicUser(user: User): PublicUser {
     statusExpiresAt: iso(user.statusExpiresAt),
     presence: effectivePresence(user),
     dndUntil: iso(user.dndUntil),
-    isBot: user.isBot
+    isBot: user.isBot,
+    workspaceStatus: options.workspaceStatus
   };
 }
 

@@ -64,6 +64,7 @@ export function MessageItem({
   const pending = (message.metadata as { pending?: boolean } | null)?.pending === true;
   const isMeMessage = (message.metadata as { subtype?: string } | null)?.subtype === "me_message";
   const sharedId = (message.metadata as { sharedMessageId?: string } | null)?.sharedMessageId;
+  const unavailable = sender?.workspaceStatus === "removed" || sender?.workspaceStatus === "suspended";
 
   useEffect(() => {
     if (state.editingMessageId === message.id) setEditText(toMentionDisplay(message.bodyText, mentions));
@@ -126,6 +127,7 @@ export function MessageItem({
               {sender?.displayName ?? t("app.unknown")}
             </button>
             {sender?.isBot ? <span className="pill app-pill">{t("messages.app")}</span> : null}
+            {unavailable ? <span className="pill unavailable-pill">{t("messages.unavailableUser")}</span> : null}
             {sender?.statusEmoji ? <EmojiValue value={`:${sender.statusEmoji}:`} /> : null}
             <time dateTime={message.createdAt} title={formatDateTime(message.createdAt, timeFormat)}>
               {formatTime(message.createdAt, timeFormat)}

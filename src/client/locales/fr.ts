@@ -19,7 +19,9 @@ export const fr: Messages = {
     active: "Actif",
     away: "Absent",
     dnd: "Ne pas deranger",
-    offline: "Hors ligne"
+    offline: "Hors ligne",
+    removedUser: "N'est plus dans cet espace de travail",
+    suspendedUser: "Compte suspendu dans cet espace de travail"
   },
   common: {
     all: "Tout",
@@ -294,6 +296,7 @@ export const fr: Messages = {
     app: "APP",
     edited: "(modifie)",
     pinned: "epingle",
+    unavailableUser: "Indisponible",
     cancel: "Annuler",
     previewFile: "Apercu de {name}",
     reply: "reponse",
@@ -389,7 +392,11 @@ export const fr: Messages = {
     nothingPinned: "Aucun message epingle",
     nothingPinnedBody: "Epinglez les messages importants depuis leur menu.",
     filesSubtitle: "Tous les fichiers partages ici",
-    noFilesBody: "Glissez un fichier dans la zone de message pour le partager."
+    noFilesBody: "Glissez un fichier dans la zone de message pour le partager.",
+    memberStatus: "Statut",
+    removedMember: "Retire",
+    suspendedMember: "Suspendu",
+    unavailableMemberMessage: "Cette personne n'est plus disponible pour de nouveaux messages."
   },
   emoji: {
     addReaction: "Ajouter une reaction",

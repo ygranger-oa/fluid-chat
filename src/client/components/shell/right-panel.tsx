@@ -148,6 +148,13 @@ function ProfilePanel({ userId, onClose }: { userId: string; onClose: () => void
   if (!user) return <PanelHeader title={t("panels.profile")} onClose={onClose} />;
 
   const localTime = localTimeIn(user.timezone, timeFormat);
+  const unavailableStatus =
+    user.workspaceStatus === "removed"
+      ? t("panels.removedMember")
+      : user.workspaceStatus === "suspended"
+        ? t("panels.suspendedMember")
+        : null;
+  const canMessage = !isSelf && !unavailableStatus;
 
   return (
     <>
@@ -183,13 +190,21 @@ function ProfilePanel({ userId, onClose }: { userId: string; onClose: () => void
           ) : null}
           <dt>{t("panels.presence")}</dt>
           <dd className="capitalize">{user.presence}</dd>
+          {unavailableStatus ? (
+            <>
+              <dt>{t("panels.memberStatus")}</dt>
+              <dd>
+                <span className="pill unavailable-pill">{unavailableStatus}</span>
+              </dd>
+            </>
+          ) : null}
         </dl>
         <div className="profile-actions">
           {isSelf ? (
             <button type="button" className="button primary" onClick={() => actions.setModal({ kind: "profile-editor" })}>
               {t("topBar.editProfile")}
             </button>
-          ) : (
+          ) : canMessage ? (
             <button
               type="button"
               className="button primary"
@@ -206,6 +221,8 @@ function ProfilePanel({ userId, onClose }: { userId: string; onClose: () => void
             >
               <MessageSquare size={15} /> {t("common.message")}
             </button>
+          ) : (
+            <p className="profile-unavailable-note">{t("panels.unavailableMemberMessage")}</p>
           )}
         </div>
       </div>

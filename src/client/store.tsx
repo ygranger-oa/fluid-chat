@@ -1172,7 +1172,9 @@ export function useMentionDirectory(): MentionDirectory {
   return useMemo(
     () => ({
       users: [
-        ...(state.bootstrap?.members ?? []).map((member) => member.user),
+        ...(state.bootstrap?.members ?? [])
+          .filter((member) => member.status === "active")
+          .map((member) => member.user),
         ...(state.bootstrap?.bots ?? []),
         ...(state.session ? [state.session] : [])
       ],

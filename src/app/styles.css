@@ -450,6 +450,24 @@ textarea:focus {
   background: var(--surface-sunken);
 }
 
+.avatar-wrap.is-unavailable .avatar {
+  filter: grayscale(1);
+  opacity: 0.72;
+}
+
+.avatar-unavailable {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  background: var(--text-muted);
+  color: var(--surface);
+}
+
 .avatar-button {
   padding: 0;
   border-radius: var(--radius-md);
@@ -1979,6 +1997,13 @@ textarea:focus {
   gap: 8px;
 }
 
+.profile-unavailable-note {
+  margin: 0;
+  max-width: 260px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
 .member-list {
   gap: 2px;
 }
@@ -2359,6 +2384,11 @@ textarea:focus {
   background: var(--surface-sunken);
   color: var(--text-muted);
   letter-spacing: 0.06em;
+}
+
+.unavailable-pill {
+  background: var(--surface-sunken);
+  color: var(--text-muted);
 }
 
 .panel-header-actions {

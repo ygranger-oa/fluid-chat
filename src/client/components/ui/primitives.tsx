@@ -10,7 +10,7 @@ import {
   type CSSProperties
 } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { Ban, X } from "lucide-react";
 import type { PublicUser } from "@/shared/types";
 import { initialsFor } from "../../format";
 import { useI18n } from "../../i18n";
@@ -24,15 +24,17 @@ export function Avatar({
   size = 36,
   presence = true
 }: {
-  user: Pick<PublicUser, "id" | "displayName" | "avatarUrl" | "avatarColor" | "presence"> | undefined;
+  user: Pick<PublicUser, "id" | "displayName" | "avatarUrl" | "avatarColor" | "presence" | "workspaceStatus"> | undefined;
   size?: number;
   presence?: boolean;
 }) {
+  const { t } = useI18n();
   if (!user) {
     return <span className="avatar avatar-placeholder" style={{ width: size, height: size }} aria-hidden />;
   }
+  const unavailable = user.workspaceStatus === "removed" || user.workspaceStatus === "suspended";
   return (
-    <span className="avatar-wrap" style={{ width: size, height: size }}>
+    <span className={`avatar-wrap ${unavailable ? "is-unavailable" : ""}`} style={{ width: size, height: size }}>
       {user.avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img className="avatar" src={user.avatarUrl} alt="" width={size} height={size} />
@@ -45,7 +47,18 @@ export function Avatar({
           {initialsFor(user.displayName)}
         </span>
       )}
-      {presence ? <PresenceDot presence={user.presence} size={size} /> : null}
+      {unavailable ? (
+        <span
+          className="avatar-unavailable"
+          style={{ width: Math.max(12, size * 0.34), height: Math.max(12, size * 0.34) }}
+          title={user.workspaceStatus === "suspended" ? t("app.suspendedUser") : t("app.removedUser")}
+          aria-label={user.workspaceStatus === "suspended" ? t("app.suspendedUser") : t("app.removedUser")}
+        >
+          <Ban size={Math.max(8, size * 0.2)} />
+        </span>
+      ) : presence ? (
+        <PresenceDot presence={user.presence} size={size} />
+      ) : null}
     </span>
   );
 }

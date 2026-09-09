@@ -20,6 +20,7 @@ export type PublicUser = {
   presence: PresenceState;
   dndUntil: string | null;
   isBot: boolean;
+  workspaceStatus?: "active" | "removed" | "suspended";
 };
 
 export type SessionUser = PublicUser & {
@@ -242,7 +243,13 @@ export type DirectoryChannel = ChannelSummary & { conversationId: string; joined
 export type WorkspaceBootstrap = {
   workspace: WorkspaceSummary;
   role: WorkspaceRoleName;
-  members: Array<{ memberId: string; role: WorkspaceRoleName; status: string; user: PublicUser }>;
+  members: Array<{
+    memberId: string;
+    role: WorkspaceRoleName;
+    status: "active" | "removed" | "suspended";
+    removedAt: string | null;
+    user: PublicUser;
+  }>;
   /** Webhook/app identities that post into conversations but hold no seat. */
   bots: PublicUser[];
   channels: DirectoryChannel[];

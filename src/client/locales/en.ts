@@ -21,7 +21,9 @@ const enMessages = {
     active: "Active",
     away: "Away",
     dnd: "Do not disturb",
-    offline: "Offline"
+    offline: "Offline",
+    removedUser: "No longer in this workspace",
+    suspendedUser: "Account suspended in this workspace"
   },
   common: {
     all: "All",
@@ -296,6 +298,7 @@ const enMessages = {
     app: "APP",
     edited: "(edited)",
     pinned: "pinned",
+    unavailableUser: "Unavailable",
     cancel: "Cancel",
     previewFile: "Preview {name}",
     reply: "reply",
@@ -391,7 +394,11 @@ const enMessages = {
     nothingPinned: "Nothing pinned yet",
     nothingPinnedBody: "Pin important messages from their menu.",
     filesSubtitle: "Everything shared here",
-    noFilesBody: "Drag a file into the message box to share it."
+    noFilesBody: "Drag a file into the message box to share it.",
+    memberStatus: "Status",
+    removedMember: "Removed",
+    suspendedMember: "Suspended",
+    unavailableMemberMessage: "This person is no longer available for new messages."
   },
   emoji: {
     addReaction: "Add reaction",

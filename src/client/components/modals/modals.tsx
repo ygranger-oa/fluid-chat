@@ -218,7 +218,9 @@ export function NewDmModal({ onClose }: { onClose: () => void }) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
 
-  const members = (state.bootstrap?.members ?? []).filter((member) => member.user.id !== state.session?.id);
+  const members = (state.bootstrap?.members ?? []).filter(
+    (member) => member.status === "active" && member.user.id !== state.session?.id
+  );
   const visible = members.filter((member) =>
     `${member.user.displayName} ${member.user.handle ?? ""}`.toLowerCase().includes(query.trim().toLowerCase())
   );
@@ -305,7 +307,7 @@ export function AddPeopleModal({ conversationId, onClose }: { conversationId: st
   const channel = conversation?.channel;
 
   const candidates = (state.bootstrap?.members ?? []).filter(
-    (member) => !conversation?.memberIds.includes(member.user.id)
+    (member) => member.status === "active" && !conversation?.memberIds.includes(member.user.id)
   );
   const visible = candidates.filter((member) =>
     `${member.user.displayName} ${member.user.handle ?? ""}`.toLowerCase().includes(query.trim().toLowerCase())

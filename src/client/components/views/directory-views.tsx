@@ -117,7 +117,7 @@ export function PeopleView() {
   const { state, actions } = useApp();
   const { t } = useI18n();
   const [query, setQuery] = useState("");
-  const members = state.bootstrap?.members ?? [];
+  const members = (state.bootstrap?.members ?? []).filter((member) => member.status === "active");
 
   const visible = members.filter((member) => {
     const term = query.trim().toLowerCase();

@@ -47,6 +47,7 @@ export function QuickSwitcher({ onClose }: { onClose: () => void }) {
       });
     }
     for (const member of state.bootstrap?.members ?? []) {
+      if (member.status !== "active") continue;
       if (member.user.id === state.session?.id) continue;
       list.push({
         id: `user-${member.user.id}`,

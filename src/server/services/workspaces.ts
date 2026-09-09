@@ -18,7 +18,7 @@ import type { User, Workspace } from "@/db/schema";
 import { HttpError } from "@/lib/http";
 import { slugify } from "@/lib/security";
 import type { WorkspaceBootstrap } from "@/shared/types";
-import { toPublicUser, toWorkspaceSummary } from "./serializers";
+import { toIso, toPublicUser, toWorkspaceSummary } from "./serializers";
 import { listChannelDirectory, listSidebarConversations } from "./conversations";
 import { unreadNotificationCount } from "./notifications";
 
@@ -169,14 +169,13 @@ export async function bootstrapWorkspace(workspace: Workspace, user: User): Prom
   return {
     workspace: toWorkspaceSummary(workspace),
     role: role[0]?.role ?? "member",
-    members: memberRows
-      .filter((row) => row.member.status === "active")
-      .map((row) => ({
-        memberId: row.member.id,
-        role: row.member.role,
-        status: row.member.status,
-        user: toPublicUser(row.user)
-      })),
+    members: memberRows.map((row) => ({
+      memberId: row.member.id,
+      role: row.member.role,
+      status: row.member.status,
+      removedAt: toIso(row.member.removedAt),
+      user: toPublicUser(row.user, { workspaceStatus: row.member.status })
+    })),
     bots: botRows.map((row) => toPublicUser(row.user)),
     channels: channelRows,
     conversations: conversationRows,
