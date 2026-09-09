@@ -77,7 +77,8 @@ export const fr: Messages = {
     createFirstWorkspace: "Creez votre premier espace de travail.",
     workspaceLede: "Un espace de travail contient vos canaux, vos membres et votre historique. Vous pourrez en creer d'autres plus tard, ou en rejoindre un via une invitation.",
     workspaceName: "Nom de l'espace de travail",
-    createWorkspace: "Creer l'espace"
+    createWorkspace: "Creer l'espace",
+    signInWithSso: "Se connecter avec le SSO"
   },
   topBar: {
     toggleNavigation: "Afficher ou masquer la navigation",
@@ -560,6 +561,12 @@ export const fr: Messages = {
     iconEmoji: "Emoji d'icone",
     membersCanInvite: "Les membres peuvent inviter des personnes",
     membersCanCreateChannels: "Les membres peuvent creer des canaux",
+    ssoEnabled: "Activer le SSO Authentik pour cet espace",
+    ssoEnabledHint: "Les utilisateurs authentifies par ce lien sont crees si besoin et ajoutes a cet espace.",
+    ssoShowOnLogin: "Afficher ce SSO sur l'ecran de connexion public",
+    ssoShowOnLoginHint: "La page de connexion globale affiche un bouton SSO sans exiger l'ID de l'espace dans l'URL.",
+    ssoAutoJoinRole: "Role des nouveaux utilisateurs SSO",
+    ssoLoginUrl: "URL de connexion SSO",
     retention: "Retention des messages (jours, vide pour conserver indefiniment)",
     saveSettings: "Enregistrer les parametres",
     loadingAuditLog: "Chargement du journal d'audit",

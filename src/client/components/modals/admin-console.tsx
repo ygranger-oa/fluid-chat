@@ -656,8 +656,12 @@ function Settings({ workspaceId, isOwner }: { workspaceId: string; isOwner: bool
     iconEmoji: workspace?.iconEmoji ?? "",
     membersCanInvite: workspace?.membersCanInvite ?? true,
     membersCanCreateChannels: workspace?.membersCanCreateChannels ?? true,
+    ssoEnabled: workspace?.ssoEnabled ?? false,
+    ssoShowOnLogin: workspace?.ssoShowOnLogin ?? false,
+    ssoAutoJoinRole: workspace?.ssoAutoJoinRole ?? "member",
     retentionDays: workspace?.retentionDays ?? ""
   });
+  const ssoUrl = typeof window === "undefined" ? "" : `${window.location.origin}/?workspaceId=${workspaceId}`;
 
   return (
     <form
@@ -671,6 +675,9 @@ function Settings({ workspaceId, isOwner }: { workspaceId: string; isOwner: bool
             iconEmoji: form.iconEmoji || null,
             membersCanInvite: form.membersCanInvite,
             membersCanCreateChannels: form.membersCanCreateChannels,
+            ssoEnabled: form.ssoEnabled,
+            ssoShowOnLogin: form.ssoShowOnLogin,
+            ssoAutoJoinRole: form.ssoAutoJoinRole,
             retentionDays: form.retentionDays === "" ? null : Number(form.retentionDays)
           });
           await actions.refreshBootstrap();
@@ -709,15 +716,43 @@ function Settings({ workspaceId, isOwner }: { workspaceId: string; isOwner: bool
         </span>
       </label>
       {isOwner ? (
-        <label className="field">
-          {t("admin.retention")}
-          <input
-            type="number"
-            min={1}
-            value={form.retentionDays ?? ""}
-            onChange={(event) => setForm({ ...form, retentionDays: event.target.value })}
-          />
-        </label>
+        <>
+          <label className="field">
+            {t("admin.retention")}
+            <input
+              type="number"
+              min={1}
+              value={form.retentionDays ?? ""}
+              onChange={(event) => setForm({ ...form, retentionDays: event.target.value })}
+            />
+          </label>
+          <label className="checkbox-field">
+            <input type="checkbox" checked={form.ssoEnabled} onChange={(event) => setForm({ ...form, ssoEnabled: event.target.checked })} />
+            <span>
+              <strong>{t("admin.ssoEnabled")}</strong>
+              <small>{t("admin.ssoEnabledHint")}</small>
+            </span>
+          </label>
+          <label className="checkbox-field">
+            <input type="checkbox" checked={form.ssoShowOnLogin} onChange={(event) => setForm({ ...form, ssoShowOnLogin: event.target.checked })} />
+            <span>
+              <strong>{t("admin.ssoShowOnLogin")}</strong>
+              <small>{t("admin.ssoShowOnLoginHint")}</small>
+            </span>
+          </label>
+          <label className="field">
+            {t("admin.ssoAutoJoinRole")}
+            <select value={form.ssoAutoJoinRole} onChange={(event) => setForm({ ...form, ssoAutoJoinRole: event.target.value as "admin" | "member" | "guest" })}>
+              <option value="member">{t("admin.member")}</option>
+              <option value="admin">{t("admin.admin")}</option>
+              <option value="guest">{t("admin.guest")}</option>
+            </select>
+          </label>
+          <label className="field">
+            {t("admin.ssoLoginUrl")}
+            <input value={ssoUrl} readOnly onFocus={(event) => event.currentTarget.select()} />
+          </label>
+        </>
       ) : null}
       <button type="submit" className="button primary">
         {t("admin.saveSettings")}

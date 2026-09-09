@@ -99,6 +99,9 @@ export function toWorkspaceSummary(workspace: Workspace): WorkspaceSummary {
     readOnlyAt: iso(workspace.readOnlyAt),
     membersCanInvite: workspace.membersCanInvite,
     membersCanCreateChannels: workspace.membersCanCreateChannels,
+    ssoEnabled: workspace.ssoEnabled,
+    ssoShowOnLogin: workspace.ssoShowOnLogin,
+    ssoAutoJoinRole: workspace.ssoAutoJoinRole,
     retentionDays: workspace.retentionDays
   };
 }

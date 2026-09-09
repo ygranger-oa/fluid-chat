@@ -59,3 +59,29 @@ ENABLE_LINK_UNFURL        Set to "true" to let the worker fetch link previews. P
                           loopback hosts are always refused.
 STRIPE_SECRET_KEY         Reserved for hosted billing integration.
 ```
+
+## Authentik SSO
+
+Fluid Chat supports OpenID Connect sign-in with Authentik. Configure an Authentik OAuth2/OpenID
+provider with this redirect URI:
+
+```text
+$APP_URL/api/auth/sso/callback
+```
+
+Then set:
+
+```text
+AUTHENTIK_ISSUER          Authentik issuer URL, for example https://auth.example.com/application/o/fluid-chat
+AUTHENTIK_CLIENT_ID       OIDC client ID.
+AUTHENTIK_CLIENT_SECRET   OIDC client secret.
+AUTHENTIK_SCOPES          Optional scopes, default: openid email profile.
+```
+
+Workspace owners can enable SSO in workspace settings. The displayed SSO login URL includes that
+workspace ID; users signing in through it are created when absent, linked by OIDC issuer/subject,
+and automatically added to the selected workspace with the configured role.
+
+Owners can also choose to show that SSO on the global sign-in screen. In that mode `/api/auth/sso/start`
+works without a `workspaceId` query parameter and uses the configured workspace as the target; this
+does not expose the workspace itself publicly.

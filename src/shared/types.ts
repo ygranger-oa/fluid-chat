@@ -41,6 +41,9 @@ export type WorkspaceSummary = {
   readOnlyAt: string | null;
   membersCanInvite: boolean;
   membersCanCreateChannels: boolean;
+  ssoEnabled: boolean;
+  ssoShowOnLogin: boolean;
+  ssoAutoJoinRole: WorkspaceRoleName;
   retentionDays: number | null;
 };
 

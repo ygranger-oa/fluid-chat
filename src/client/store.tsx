@@ -917,8 +917,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         dispatch({ type: "session", session: user, memberships: workspaces });
         if (!user || workspaces.length === 0) return;
+        const requestedWorkspaceId = new URLSearchParams(window.location.search).get("workspaceId");
+        if (requestedWorkspaceId) {
+          window.history.replaceState(null, "", window.location.pathname);
+        }
         const stored = window.localStorage.getItem("fluidchat:workspace");
-        const target = workspaces.find((entry) => entry.workspace.id === stored) ?? workspaces[0];
+        const target =
+          workspaces.find((entry) => entry.workspace.id === requestedWorkspaceId) ??
+          workspaces.find((entry) => entry.workspace.id === stored) ??
+          workspaces[0];
         await actions.selectWorkspace(target.workspace.id);
       })
       .catch(() => dispatch({ type: "session", session: null, memberships: [] }));

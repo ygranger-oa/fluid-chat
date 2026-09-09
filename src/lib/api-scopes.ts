@@ -65,6 +65,8 @@ export const ROUTE_ACCESS: Record<string, RouteAccess> = {
   "POST /auth/forgot-password": PUBLIC_ROUTE,
   "POST /auth/reset-password": PUBLIC_ROUTE,
   "POST /auth/change-password": SESSION_ONLY,
+  "GET /auth/sso/start": PUBLIC_ROUTE,
+  "GET /auth/sso/callback": PUBLIC_ROUTE,
   "POST /auth/verify-email": PUBLIC_ROUTE,
   "POST /auth/resend-verification": SESSION_ONLY,
   "GET /auth/sessions": SESSION_ONLY,

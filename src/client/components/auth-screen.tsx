@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, ApiError } from "../api";
 import { identifyUser, track } from "../analytics";
 import { useI18n } from "../i18n";
@@ -9,12 +9,22 @@ import { useApp } from "../store";
 export function AuthScreen() {
   const { actions } = useApp();
   const { t } = useI18n();
+  const [ssoWorkspaceId, setSsoWorkspaceId] = useState<string | null>(null);
+  const [showGlobalSso, setShowGlobalSso] = useState(false);
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setSsoWorkspaceId(new URLSearchParams(window.location.search).get("workspaceId"));
+    api.auth
+      .me()
+      .then(({ sso }) => setShowGlobalSso(!!sso?.showOnLogin))
+      .catch(() => setShowGlobalSso(false));
+  }, []);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -120,6 +130,11 @@ export function AuthScreen() {
           ) : null}
           {notice ? <p className="notice">{notice}</p> : null}
         </form>
+        {ssoWorkspaceId || showGlobalSso ? (
+          <a className="button ghost full-width" href={ssoWorkspaceId ? `/api/auth/sso/start?workspaceId=${encodeURIComponent(ssoWorkspaceId)}` : "/api/auth/sso/start"}>
+            {t("auth.signInWithSso")}
+          </a>
+        ) : null}
       </section>
     </main>
   );

@@ -95,7 +95,10 @@ export type SlashOutcome =
 
 export const api = {
   auth: {
-    me: () => get<{ user: SessionUser | null; workspaces: WorkspaceMembership[] }>("/auth/me"),
+    me: () =>
+      get<{ user: SessionUser | null; workspaces: WorkspaceMembership[]; sso?: { enabled: boolean; showOnLogin: boolean } }>(
+        "/auth/me"
+      ),
     login: (email: string, password: string) =>
       post<{ user: SessionUser; workspaces: WorkspaceMembership[] }>("/auth/login", { email, password }),
     signup: (input: { email: string; password: string; displayName: string }) =>

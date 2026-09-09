@@ -36,6 +36,9 @@ const settingsSchema = z.object({
   logoUrl: z.string().max(500).nullable().optional(),
   membersCanInvite: z.boolean().optional(),
   membersCanCreateChannels: z.boolean().optional(),
+  ssoEnabled: z.boolean().optional(),
+  ssoShowOnLogin: z.boolean().optional(),
+  ssoAutoJoinRole: z.enum(["admin", "member", "guest"]).optional(),
   retentionDays: z.number().int().min(1).max(3650).nullable().optional(),
   plan: z.enum(["free", "starter", "team", "business"]).optional(),
   seatLimit: z.number().int().positive().optional(),
@@ -45,7 +48,17 @@ const settingsSchema = z.object({
   readOnlyAt: z.coerce.date().nullable().optional()
 });
 
-const billingFields = ["plan", "seatLimit", "overageAllowed", "subscriptionStatus", "gracePeriodEndsAt", "readOnlyAt"] as const;
+const ownerOnlyFields = [
+  "plan",
+  "seatLimit",
+  "overageAllowed",
+  "subscriptionStatus",
+  "gracePeriodEndsAt",
+  "readOnlyAt",
+  "ssoEnabled",
+  "ssoShowOnLogin",
+  "ssoAutoJoinRole"
+] as const;
 
 export const workspaceRoutes = defineRoutes({
   "POST /workspaces": async (ctx) => {
@@ -108,14 +121,19 @@ export const workspaceRoutes = defineRoutes({
     const workspaceId = ctx.param("workspaceId");
     await requireWorkspaceAdmin(workspaceId, user.id);
     const input = await ctx.input(settingsSchema);
-    if (billingFields.some((field) => input[field] !== undefined)) {
+    if (ownerOnlyFields.some((field) => input[field] !== undefined)) {
       await requireWorkspaceOwner(workspaceId, user.id);
     }
-    const [workspace] = await db
-      .update(workspaces)
-      .set({ ...input, updatedAt: new Date() })
-      .where(eq(workspaces.id, workspaceId))
-      .returning();
+    const [workspace] = await db.transaction(async (tx) => {
+      if (input.ssoShowOnLogin === true) {
+        await tx.update(workspaces).set({ ssoShowOnLogin: false }).where(eq(workspaces.ssoShowOnLogin, true));
+      }
+      return tx
+        .update(workspaces)
+        .set({ ...input, updatedAt: new Date() })
+        .where(eq(workspaces.id, workspaceId))
+        .returning();
+    });
     await createAudit(workspaceId, user.id, "workspace.updated", "workspace", workspaceId, input);
     return { workspace: toWorkspaceSummary(workspace) };
   },

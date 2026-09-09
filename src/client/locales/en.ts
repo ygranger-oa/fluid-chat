@@ -79,7 +79,8 @@ const enMessages = {
     createFirstWorkspace: "Create your first workspace.",
     workspaceLede: "A workspace holds your channels, people and history. You can create more later, or join one from an invite link.",
     workspaceName: "Workspace name",
-    createWorkspace: "Create workspace"
+    createWorkspace: "Create workspace",
+    signInWithSso: "Sign in with SSO"
   },
   topBar: {
     toggleNavigation: "Toggle navigation",
@@ -562,6 +563,12 @@ const enMessages = {
     iconEmoji: "Icon emoji",
     membersCanInvite: "Members can invite people",
     membersCanCreateChannels: "Members can create channels",
+    ssoEnabled: "Enable Authentik SSO for this workspace",
+    ssoEnabledHint: "Users who authenticate through this link are created if needed and added to this workspace.",
+    ssoShowOnLogin: "Show this SSO on the public sign-in screen",
+    ssoShowOnLoginHint: "The global sign-in page shows an SSO button without requiring a workspace ID in the URL.",
+    ssoAutoJoinRole: "Role for new SSO users",
+    ssoLoginUrl: "SSO login URL",
     retention: "Message retention (days, blank keeps forever)",
     saveSettings: "Save settings",
     loadingAuditLog: "Loading audit log",

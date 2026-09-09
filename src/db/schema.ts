@@ -79,6 +79,19 @@ export const sessions = pgTable("sessions", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
 });
 
+export const ssoAccounts = pgTable("sso_accounts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  provider: text("provider").notNull().default("authentik"),
+  issuer: text("issuer").notNull(),
+  subject: text("subject").notNull(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+}, (table) => [
+  unique().on(table.provider, table.issuer, table.subject)
+]);
+
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -118,10 +131,24 @@ export const workspaces = pgTable("workspaces", {
   retentionDays: integer("retention_days"),
   membersCanInvite: boolean("members_can_invite").notNull().default(true),
   membersCanCreateChannels: boolean("members_can_create_channels").notNull().default(true),
+  ssoEnabled: boolean("sso_enabled").notNull().default(false),
+  ssoShowOnLogin: boolean("sso_show_on_login").notNull().default(false),
+  ssoAutoJoinRole: workspaceRole("sso_auto_join_role").notNull().default("member"),
   createdByUserId: uuid("created_by_user_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   deletedAt: timestamp("deleted_at", { withTimezone: true })
+});
+
+export const ssoStates = pgTable("sso_states", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  stateHash: text("state_hash").notNull().unique(),
+  codeVerifier: text("code_verifier").notNull(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  redirectTo: text("redirect_to"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
 });
 
 export const workspaceMembers = pgTable("workspace_members", {
@@ -568,6 +595,7 @@ export type FileRecord = typeof files.$inferSelect;
 export type NotificationRecord = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
 export type WorkspaceInvite = typeof workspaceInvites.$inferSelect;
+export type SsoAccount = typeof ssoAccounts.$inferSelect;
 export type Draft = typeof drafts.$inferSelect;
 export type ScheduledMessage = typeof scheduledMessages.$inferSelect;
 export type Reminder = typeof reminders.$inferSelect;

@@ -1,4 +1,5 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db/client";
 import {
@@ -25,6 +26,7 @@ import {
 import { defineRoutes } from "../router";
 import { avatarColorFor, toSessionUser, toWorkspaceSummary } from "../services/serializers";
 import { heartbeat } from "../services/presence";
+import { completeSsoLogin, publicSsoAvailable, ssoConfigured, ssoLoginUrl } from "../services/sso";
 
 const appUrl = () => process.env.APP_URL ?? "http://localhost:3000";
 
@@ -127,8 +129,34 @@ export const authRoutes = defineRoutes({
 
   "GET /auth/me": async (ctx) => {
     const user = await ctx.optionalUser();
-    if (!user) return { user: null, workspaces: [] };
-    return { user: toSessionUser(user), workspaces: await membershipsFor(user.id) };
+    const sso = { enabled: ssoConfigured(), showOnLogin: await publicSsoAvailable() };
+    if (!user) return { user: null, workspaces: [], sso };
+    return { user: toSessionUser(user), workspaces: await membershipsFor(user.id), sso };
+  },
+
+  "GET /auth/sso/start": async (ctx) => {
+    const workspaceId = ctx.query("workspaceId");
+    const url = await ssoLoginUrl(workspaceId, ctx.query("redirectTo"));
+    return NextResponse.redirect(url);
+  },
+
+  "GET /auth/sso/callback": async (ctx) => {
+    const code = ctx.query("code");
+    const state = ctx.query("state");
+    if (!code || !state) throw new HttpError(400, "SSO callback is missing code or state", "invalid_sso_callback");
+    const result = await completeSsoLogin({
+      code,
+      state,
+      userAgent: ctx.request.headers.get("user-agent"),
+      ipAddress: ctx.request.headers.get("x-forwarded-for")
+    });
+    await createSession(result.user.id, {
+      userAgent: ctx.request.headers.get("user-agent"),
+      ipAddress: ctx.request.headers.get("x-forwarded-for")
+    });
+    const redirect = new URL(result.redirectTo ?? "/", appUrl());
+    redirect.searchParams.set("workspaceId", result.workspaceId);
+    return NextResponse.redirect(redirect);
   },
 
   "POST /auth/forgot-password": async (ctx) => {
