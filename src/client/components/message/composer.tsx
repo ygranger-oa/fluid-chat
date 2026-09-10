@@ -34,13 +34,36 @@ import { api } from "../../api";
 import { track } from "../../analytics";
 import { searchEmoji } from "../../emoji";
 import { formatBytes } from "../../format";
-import { useI18n } from "../../i18n";
+import { useI18n, type TranslationKey } from "../../i18n";
 import { useApp, useCustomEmoji, useDirectory, useMentionDirectory } from "../../store";
 import { Avatar, IconButton, Popover } from "../ui/primitives";
 import { EmojiPicker } from "../ui/emoji-picker";
 import { GifPicker } from "../ui/gif-picker";
 
 type Suggestion = { id: string; label: string; hint?: string; insert: string; avatarUserId?: string; preview?: string };
+
+const slashCommandDescriptionKeys: Partial<Record<string, TranslationKey>> = {
+  me: "composer.slashCommands.me",
+  shrug: "composer.slashCommands.shrug",
+  topic: "composer.slashCommands.topic",
+  purpose: "composer.slashCommands.purpose",
+  rename: "composer.slashCommands.rename",
+  invite: "composer.slashCommands.invite",
+  join: "composer.slashCommands.join",
+  leave: "composer.slashCommands.leave",
+  archive: "composer.slashCommands.archive",
+  msg: "composer.slashCommands.msg",
+  remind: "composer.slashCommands.remind",
+  dnd: "composer.slashCommands.dnd",
+  away: "composer.slashCommands.away",
+  active: "composer.slashCommands.active",
+  status: "composer.slashCommands.status",
+  mute: "composer.slashCommands.mute",
+  unmute: "composer.slashCommands.unmute",
+  who: "composer.slashCommands.who",
+  shortcuts: "composer.slashCommands.shortcuts",
+  help: "composer.slashCommands.help"
+};
 
 export function Composer({
   conversationId,
@@ -203,7 +226,15 @@ export function Composer({
     return commands
       .filter((command) => !query || command.name.startsWith(query))
       .slice(0, 8)
-      .map((command) => ({ id: command.name, label: command.usage, hint: command.description, insert: `/${command.name} ` }));
+      .map((command) => {
+        const descriptionKey = slashCommandDescriptionKeys[command.name];
+        return {
+          id: command.name,
+          label: command.usage,
+          hint: descriptionKey ? t(descriptionKey) : command.description,
+          insert: `/${command.name} `
+        };
+      });
   }, [caret, commands, customEmoji, dismissedAt, state.bootstrap, state.session?.id, t, trigger]);
 
   useEffect(() => setSuggestionIndex(0), [suggestions.length]);

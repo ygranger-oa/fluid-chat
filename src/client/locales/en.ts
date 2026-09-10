@@ -311,7 +311,29 @@ const enMessages = {
     send: "Send",
     hintEnter: "Enter to send - Shift+Enter for a new line",
     hintCmd: "Cmd+Enter to send",
-    hintCommands: "Type / for commands"
+    hintCommands: "Type / for commands",
+    slashCommands: {
+      me: "Post an action in the third person",
+      shrug: "Append ¯\\_(ツ)_/¯ to your message",
+      topic: "Set the channel topic",
+      purpose: "Set the channel description",
+      rename: "Rename this channel",
+      invite: "Add people to this channel",
+      join: "Join a channel",
+      leave: "Leave this channel",
+      archive: "Archive this channel",
+      msg: "Send a direct message",
+      remind: "Set a reminder",
+      dnd: "Pause notifications",
+      away: "Set yourself away",
+      active: "Set yourself active",
+      status: "Set your status",
+      mute: "Mute this conversation",
+      unmute: "Unmute this conversation",
+      who: "List members of this conversation",
+      shortcuts: "Show keyboard shortcuts",
+      help: "List available commands"
+    }
   },
   messages: {
     deleted: "This message was deleted.",

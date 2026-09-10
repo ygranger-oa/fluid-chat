@@ -309,7 +309,29 @@ export const fr: Messages = {
     send: "Envoyer",
     hintEnter: "Entree pour envoyer - Maj+Entree pour une nouvelle ligne",
     hintCmd: "Cmd+Entree pour envoyer",
-    hintCommands: "Tapez / pour les commandes"
+    hintCommands: "Tapez / pour les commandes",
+    slashCommands: {
+      me: "Publier une action a la troisieme personne",
+      shrug: "Ajouter ¯\\_(ツ)_/¯ a votre message",
+      topic: "Definir le sujet du canal",
+      purpose: "Definir la description du canal",
+      rename: "Renommer ce canal",
+      invite: "Ajouter des personnes a ce canal",
+      join: "Rejoindre un canal",
+      leave: "Quitter ce canal",
+      archive: "Archiver ce canal",
+      msg: "Envoyer un message direct",
+      remind: "Creer un rappel",
+      dnd: "Mettre les notifications en pause",
+      away: "Vous definir comme absent",
+      active: "Vous definir comme actif",
+      status: "Definir votre statut",
+      mute: "Couper les notifications de cette conversation",
+      unmute: "Retablir les notifications de cette conversation",
+      who: "Lister les membres de cette conversation",
+      shortcuts: "Afficher les raccourcis clavier",
+      help: "Lister les commandes disponibles"
+    }
   },
   messages: {
     deleted: "Ce message a ete supprime.",
