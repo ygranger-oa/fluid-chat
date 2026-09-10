@@ -49,7 +49,7 @@ async function main() {
       continue;
     }
 
-    if (record.deletedAt || record.expiresAt <= new Date()) {
+    if (record.deletedAt || (record.expiresAt && record.expiresAt <= new Date())) {
       if (deleteLocal) {
         await db.delete(files).where(eq(files.id, record.id));
         await rm(localPath, { force: true });

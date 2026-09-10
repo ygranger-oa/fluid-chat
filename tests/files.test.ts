@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assertFileUploadAllowed,
-  FILE_RETENTION_MS,
+  DEFAULT_FILE_RETENTION_DAYS,
   fileExpiresAt,
   MAX_UPLOAD_BYTES,
   MAX_WORKSPACE_FILE_BYTES
@@ -56,18 +56,27 @@ describe("file storage policy", () => {
     ).not.toThrow();
   });
 
-  it("rejects files over 10MB and workspace usage over 100MB", () => {
+  it("rejects files over the configured upload and workspace limits", () => {
     expect(() => assertFileUploadAllowed(MAX_UPLOAD_BYTES + 1)).toThrowError(
       expect.objectContaining({ status: 413, code: "file_too_large" })
     );
     expect(() => assertFileUploadAllowed(1, MAX_WORKSPACE_FILE_BYTES)).toThrowError(
       expect.objectContaining({ status: 413, code: "workspace_storage_limit" })
     );
+    expect(() => assertFileUploadAllowed(6 * 1024 * 1024, 0, { maxUploadBytes: 5 * 1024 * 1024 })).toThrowError(
+      expect.objectContaining({ status: 413, code: "file_too_large" })
+    );
   });
 
-  it("expires files exactly 15 days after creation", () => {
+  it("keeps files indefinitely by default", () => {
+    expect(DEFAULT_FILE_RETENTION_DAYS).toBe(0);
+    expect(fileExpiresAt()).toBeNull();
+  });
+
+  it("expires files after the configured retention window", () => {
     const createdAt = new Date("2026-08-11T12:34:56.000Z");
-    expect(fileExpiresAt(createdAt).getTime() - createdAt.getTime()).toBe(FILE_RETENTION_MS);
+    const expiresAt = fileExpiresAt(15, createdAt);
+    expect(expiresAt?.getTime()).toBe(createdAt.getTime() + 15 * 86_400_000);
   });
 
   it("creates isolated, sanitized S3 object keys", () => {

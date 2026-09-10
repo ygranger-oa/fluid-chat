@@ -10,6 +10,7 @@ import {
   users,
   workspaceMembers
 } from "@/db/schema";
+import { activeFileFilter } from "./file-policy";
 import { hydrateMessages } from "./messages";
 
 export type ParsedSearch = {
@@ -124,7 +125,7 @@ export async function searchMessages(options: {
                   and(
                     eq(files.messageId, messages.id),
                     isNull(files.deletedAt),
-                    gt(files.expiresAt, new Date())
+                    activeFileFilter()
                   )
                 )
             )

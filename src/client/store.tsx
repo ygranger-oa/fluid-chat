@@ -399,10 +399,12 @@ function reducer(state: State, action: Action): State {
     case "draft":
       return { ...state, drafts: { ...state.drafts, [action.key]: action.bodyText } };
     case "presence":
-      return state.bootstrap
-        ? {
-            ...state,
-            bootstrap: {
+      return {
+        ...state,
+        session:
+          state.session?.id === action.userId ? { ...state.session, presence: action.presence } : state.session,
+        bootstrap: state.bootstrap
+          ? {
               ...state.bootstrap,
               members: state.bootstrap.members.map((member) =>
                 member.user.id === action.userId
@@ -410,8 +412,8 @@ function reducer(state: State, action: Action): State {
                   : member
               )
             }
-          }
-        : state;
+          : state.bootstrap
+      };
     case "user":
       return {
         ...state,
@@ -1127,7 +1129,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!state.session) return;
     const beat = () => {
       if (document.visibilityState === "visible") {
-        void api.users.heartbeat().catch(() => undefined);
+        void api.users
+          .heartbeat()
+          .then(({ presence }) => {
+            const userId = stateRef.current.session?.id;
+            if (userId) dispatch({ type: "presence", userId, presence });
+          })
+          .catch(() => undefined);
         actions.socketRef.current?.emit("heartbeat");
       }
     };

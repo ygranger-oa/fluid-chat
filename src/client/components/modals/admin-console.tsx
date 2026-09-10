@@ -663,7 +663,11 @@ function Settings({ workspaceId, isOwner }: { workspaceId: string; isOwner: bool
     ssoClientId: workspace?.ssoClientId ?? "",
     ssoClientSecret: "",
     ssoScopes: workspace?.ssoScopes ?? "openid email profile",
-    retentionDays: workspace?.retentionDays ?? ""
+    retentionDays: workspace?.retentionDays ?? "",
+    seatLimit: workspace?.seatLimit ?? 50,
+    maxUploadMb: workspace?.maxUploadMb ?? 10,
+    storageLimitMb: workspace?.storageLimitMb ?? 10000,
+    fileRetentionDays: workspace?.fileRetentionDays ?? 0
   });
   const ssoUrl = typeof window === "undefined" ? "" : `${window.location.origin}/?workspaceId=${workspaceId}`;
 
@@ -679,15 +683,23 @@ function Settings({ workspaceId, isOwner }: { workspaceId: string; isOwner: bool
             iconEmoji: form.iconEmoji || null,
             membersCanInvite: form.membersCanInvite,
             membersCanCreateChannels: form.membersCanCreateChannels,
-            ssoEnabled: form.ssoEnabled,
-            ssoShowOnLogin: form.ssoShowOnLogin,
-            ssoAutoJoinRole: form.ssoAutoJoinRole,
-            ssoIssuer: form.ssoIssuer || null,
-            ssoClientId: form.ssoClientId || null,
-            ssoScopes: form.ssoScopes || null,
-            retentionDays: form.retentionDays === "" ? null : Number(form.retentionDays)
+            seatLimit: Number(form.seatLimit),
+            maxUploadMb: Number(form.maxUploadMb),
+            storageLimitMb: Number(form.storageLimitMb),
+            fileRetentionDays: Number(form.fileRetentionDays)
           };
-          if (form.ssoClientSecret.trim()) update.ssoClientSecret = form.ssoClientSecret;
+          if (isOwner) {
+            Object.assign(update, {
+              ssoEnabled: form.ssoEnabled,
+              ssoShowOnLogin: form.ssoShowOnLogin,
+              ssoAutoJoinRole: form.ssoAutoJoinRole,
+              ssoIssuer: form.ssoIssuer || null,
+              ssoClientId: form.ssoClientId || null,
+              ssoScopes: form.ssoScopes || null,
+              retentionDays: form.retentionDays === "" ? null : Number(form.retentionDays)
+            });
+            if (form.ssoClientSecret.trim()) update.ssoClientSecret = form.ssoClientSecret;
+          }
           await api.workspaces.update(workspaceId, update);
           await actions.refreshBootstrap();
           actions.toast(t("admin.workspaceUpdated"), "success");
@@ -723,6 +735,46 @@ function Settings({ workspaceId, isOwner }: { workspaceId: string; isOwner: bool
         <span>
           <strong>{t("admin.membersCanCreateChannels")}</strong>
         </span>
+      </label>
+      <label className="field">
+        {t("admin.seatLimit")}
+        <input
+          type="number"
+          min={1}
+          value={form.seatLimit}
+          onChange={(event) => setForm({ ...form, seatLimit: Number(event.target.value) })}
+        />
+      </label>
+      <label className="field">
+        {t("admin.maxUploadMb")}
+        <input
+          type="number"
+          min={1}
+          max={1024}
+          value={form.maxUploadMb}
+          onChange={(event) => setForm({ ...form, maxUploadMb: Number(event.target.value) })}
+        />
+      </label>
+      <label className="field">
+        {t("admin.storageLimitMb")}
+        <input
+          type="number"
+          min={1}
+          max={102400}
+          value={form.storageLimitMb}
+          onChange={(event) => setForm({ ...form, storageLimitMb: Number(event.target.value) })}
+        />
+      </label>
+      <label className="field">
+        {t("admin.fileRetentionDays")}
+        <input
+          type="number"
+          min={0}
+          max={3650}
+          value={form.fileRetentionDays}
+          onChange={(event) => setForm({ ...form, fileRetentionDays: Number(event.target.value) })}
+        />
+        <small>{t("admin.fileRetentionHint")}</small>
       </label>
       {isOwner ? (
         <>

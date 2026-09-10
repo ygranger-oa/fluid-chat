@@ -8,7 +8,7 @@ import {
   PutObjectCommand,
   S3Client
 } from "@aws-sdk/client-s3";
-import { EXPORT_RETENTION_DAYS, FILE_RETENTION_MS } from "./file-policy";
+import { EXPORT_RETENTION_DAYS } from "./file-policy";
 
 const FILE_PREFIX = "files/";
 const EXPORT_PREFIX = "exports/";
@@ -73,7 +73,7 @@ export function storageKeyFromUri(uri: string | null) {
 export async function putObject(
   key: string,
   data: Buffer,
-  options: { contentType?: string; expiresAt?: Date } = {}
+  options: { contentType?: string; expiresAt?: Date | null } = {}
 ) {
   const { bucket, client } = storage();
   await client.send(
@@ -149,8 +149,5 @@ async function deleteObjectBatch(client: S3Client, bucket: string, prefix: strin
 
 /** Delete aged objects even when their database transaction never committed. */
 export async function purgeExpiredStorageObjects(now = new Date()) {
-  await Promise.all([
-    deleteObjectsOlderThan(FILE_PREFIX, new Date(now.getTime() - FILE_RETENTION_MS)),
-    deleteObjectsOlderThan(EXPORT_PREFIX, new Date(now.getTime() - EXPORT_RETENTION_DAYS * 86_400_000))
-  ]);
+  await deleteObjectsOlderThan(EXPORT_PREFIX, new Date(now.getTime() - EXPORT_RETENTION_DAYS * 86_400_000));
 }

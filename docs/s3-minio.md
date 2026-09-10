@@ -28,13 +28,13 @@ does not modify bucket-level lifecycle configuration.
 
 ## Limits
 
-- Maximum file size: 10MB (10 MiB).
-- Maximum active file storage per workspace: 100MB (100 MiB).
-- Upload retention: 15 days.
+- Maximum file size: configured per workspace with `max_upload_mb` (10 MiB by default).
+- Maximum active file storage per workspace: configured per workspace with `storage_limit_mb` (10000 MiB by default).
+- Upload retention: configured per workspace with `file_retention_days` (`0` keeps files indefinitely, and is the default).
 - Workspace export retention: 7 days.
 
-Workspace quota checks are serialized in Postgres, so concurrent uploads cannot exceed the cap.
-Expired and deleted files do not count toward quota.
+Workspace admins can change file limits and upload retention from workspace settings. Workspace quota checks are serialized in Postgres, so concurrent uploads cannot exceed the cap.
+Expired and deleted files do not count toward quota. Files with no expiration continue to count until deleted.
 
 ## Migrating existing local uploads
 

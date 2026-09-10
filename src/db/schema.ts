@@ -124,7 +124,10 @@ export const workspaces = pgTable("workspaces", {
   plan: text("plan").notNull().default("free"),
   stripeCustomerId: text("stripe_customer_id"),
   subscriptionStatus: text("subscription_status").notNull().default("active"),
-  seatLimit: integer("seat_limit").notNull().default(5),
+  seatLimit: integer("seat_limit").notNull().default(50),
+  maxUploadMb: integer("max_upload_mb").notNull().default(10),
+  storageLimitMb: integer("storage_limit_mb").notNull().default(10000),
+  fileRetentionDays: integer("file_retention_days").notNull().default(0),
   overageAllowed: boolean("overage_allowed").notNull().default(false),
   gracePeriodEndsAt: timestamp("grace_period_ends_at", { withTimezone: true }),
   readOnlyAt: timestamp("read_only_at", { withTimezone: true }),
@@ -488,7 +491,7 @@ export const files = pgTable("files", {
   width: integer("width"),
   height: integer("height"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
   deletedAt: timestamp("deleted_at", { withTimezone: true })
 }, (table) => [
   index("files_workspace_idx").on(table.workspaceId, table.createdAt),

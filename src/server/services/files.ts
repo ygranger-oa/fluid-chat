@@ -1,10 +1,10 @@
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { files } from "@/db/schema";
+import { files, workspaces } from "@/db/schema";
 import type { User } from "@/db/schema";
 import { HttpError } from "@/lib/http";
 import { resolveConversationAccess } from "@/lib/permissions";
-import { assertFileUploadAllowed, fileExpiresAt } from "./file-policy";
+import { activeFileFilter, assertFileUploadAllowed, fileExpiresAt, fileLimitBytes } from "./file-policy";
 import { buildStorageKey, deleteObject, putObject } from "./storage";
 import { toFileSummary } from "./serializers";
 
@@ -48,7 +48,21 @@ export async function uploadFile(options: {
   if (!file || typeof file.arrayBuffer !== "function") {
     throw new HttpError(400, "No file provided", "missing_file");
   }
-  assertFileUploadAllowed(file.size);
+  const [workspace] = await db
+    .select({
+      maxUploadMb: workspaces.maxUploadMb,
+      storageLimitMb: workspaces.storageLimitMb,
+      fileRetentionDays: workspaces.fileRetentionDays
+    })
+    .from(workspaces)
+    .where(eq(workspaces.id, options.workspaceId))
+    .limit(1);
+  if (!workspace) throw new HttpError(404, "Workspace not found", "not_found");
+  const limits = {
+    maxUploadBytes: fileLimitBytes(workspace.maxUploadMb),
+    maxWorkspaceFileBytes: fileLimitBytes(workspace.storageLimitMb)
+  };
+  assertFileUploadAllowed(file.size, 0, limits);
   if (options.conversationId) {
     const access = await resolveConversationAccess(options.conversationId, options.uploader.id);
     if (access.conversation.workspaceId !== options.workspaceId) {
@@ -57,11 +71,11 @@ export async function uploadFile(options: {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  assertFileUploadAllowed(buffer.byteLength);
+  assertFileUploadAllowed(buffer.byteLength, 0, limits);
   const name = file.name || "upload";
   const mimeType = file.type || "application/octet-stream";
   const key = buildStorageKey(options.workspaceId, name);
-  const expiresAt = fileExpiresAt();
+  const expiresAt = fileExpiresAt(workspace.fileRetentionDays);
   const dimensions = imageDimensions(buffer, file.type);
 
   // Write the object before opening the transaction. An S3 round-trip inside
@@ -82,10 +96,10 @@ export async function uploadFile(options: {
           and(
             eq(files.workspaceId, options.workspaceId),
             isNull(files.deletedAt),
-            gt(files.expiresAt, new Date())
+            activeFileFilter()
           )
         );
-      assertFileUploadAllowed(buffer.byteLength, Number(usage?.bytes ?? 0));
+      assertFileUploadAllowed(buffer.byteLength, Number(usage?.bytes ?? 0), limits);
 
       const [inserted] = await tx
         .insert(files)
@@ -134,7 +148,7 @@ export async function readableFile(fileId: string, userId: string) {
   const [record] = await db
     .select()
     .from(files)
-    .where(and(eq(files.id, fileId), isNull(files.deletedAt), gt(files.expiresAt, new Date())))
+    .where(and(eq(files.id, fileId), isNull(files.deletedAt), activeFileFilter()))
     .limit(1);
   if (!record) throw new HttpError(404, "File not found", "not_found");
 

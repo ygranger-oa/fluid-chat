@@ -35,10 +35,11 @@ S3_REGION                 S3 region (default auto; use auto for Cloudflare R2).
 S3_FORCE_PATH_STYLE       Set true for MinIO/providers that require path-style URLs.
 ```
 
-Uploads are limited to 10MB each and 100MB of active files per workspace. They expire after 15
-days. Both the API and worker enforce expiration, and the worker also sweeps the `files/` prefix
-for orphaned objects. Workspace exports are stored in S3 and expire after 7 days. No runtime
-upload or export data is written to local disk.
+Uploads default to 10MB each and 10000MB of active files per workspace; workspace admins can
+change both limits from workspace settings. Uploaded files are kept indefinitely by default
+(`file_retention_days = 0`) and can be configured per workspace. Both the API and worker enforce
+expiration when a file has one. Workspace exports are stored in S3 and expire after 7 days. No
+runtime upload or export data is written to local disk.
 
 ## Email
 

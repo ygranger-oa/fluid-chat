@@ -21,6 +21,7 @@ import {
 } from "@/lib/permissions";
 import { toConversation, toUsers, toWorkspace } from "@/lib/realtime";
 import { defineRoutes } from "../router";
+import { activeFileFilter } from "../services/file-policy";
 import {
   conversationLabel,
   conversationMemberList,
@@ -319,7 +320,7 @@ export const conversationRoutes = defineRoutes({
     const rows = await db
       .select()
       .from(files)
-      .where(and(eq(files.conversationId, conversationId), isNull(files.deletedAt), gt(files.expiresAt, new Date())))
+      .where(and(eq(files.conversationId, conversationId), isNull(files.deletedAt), activeFileFilter()))
       .orderBy(desc(files.createdAt))
       .limit(ctx.queryInt("limit", 50));
     return { files: rows.map(toFileSummary) };

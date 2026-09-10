@@ -38,6 +38,9 @@ export type WorkspaceSummary = {
   logoUrl: string | null;
   plan: string;
   seatLimit: number;
+  maxUploadMb: number;
+  storageLimitMb: number;
+  fileRetentionDays: number;
   subscriptionStatus: string;
   readOnlyAt: string | null;
   membersCanInvite: boolean;

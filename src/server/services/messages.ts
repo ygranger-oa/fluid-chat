@@ -20,6 +20,7 @@ import { groupReactions, withReacted } from "@/shared/reactions";
 import type { MessageDto, PollMetadata, ReactionGroup } from "@/shared/types";
 import { requireWorkspaceMember } from "@/lib/permissions";
 import { requireWorkspaceWritable } from "@/lib/billing";
+import { activeFileFilter } from "./file-policy";
 import { deliverableRecipients, keywordRecipients, notify } from "./notifications";
 import { mentionNameResolver, resolveMentionedUserIds } from "./mentions";
 import { followedThreadIds, threadFollowersFor } from "./threads";
@@ -76,7 +77,7 @@ export async function hydrateMessages(rows: Message[], viewerId: string): Promis
     db
       .select()
       .from(files)
-      .where(and(inArray(files.messageId, ids), isNull(files.deletedAt), gt(files.expiresAt, new Date()))),
+      .where(and(inArray(files.messageId, ids), isNull(files.deletedAt), activeFileFilter())),
     db.select({ messageId: messagePins.messageId }).from(messagePins).where(inArray(messagePins.messageId, ids)),
     db
       .select({ messageId: savedItems.messageId })
@@ -348,7 +349,7 @@ export async function createMessage(input: CreateMessageInput): Promise<MessageD
           eq(files.workspaceId, conversation.workspaceId),
           isNull(files.messageId),
           isNull(files.deletedAt),
-          gt(files.expiresAt, new Date())
+          activeFileFilter()
         )
       );
   }

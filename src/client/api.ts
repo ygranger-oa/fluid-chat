@@ -128,7 +128,7 @@ export const api = {
       put<{ user: SessionUser }>("/users/me/status", input),
     setPresence: (presence: "active" | "away" | "dnd" | "offline", dndUntil?: string | null) =>
       put<{ user: SessionUser }>("/users/me/presence", { presence, dndUntil }),
-    heartbeat: () => post<{ presence: string }>("/users/me/heartbeat"),
+    heartbeat: () => post<{ presence: PublicUser["presence"] }>("/users/me/heartbeat"),
     profile: (userId: string) => get<{ user: PublicUser }>(`/users/${userId}`)
   },
 

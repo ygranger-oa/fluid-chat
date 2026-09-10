@@ -16,6 +16,7 @@ import {
 import { HttpError } from "@/lib/http";
 import { requireWorkspaceMember } from "@/lib/permissions";
 import { defineRoutes } from "../router";
+import { activeFileFilter } from "../services/file-policy";
 import { hydrateMessages } from "../services/messages";
 import { markNotificationsRead, unreadNotificationCount } from "../services/notifications";
 import { searchMessages } from "../services/search";
@@ -242,7 +243,7 @@ export const activityRoutes = defineRoutes({
           isNull(conversationMembers.leftAt)
         )
       )
-      .where(and(eq(files.workspaceId, workspaceId), isNull(files.deletedAt), gt(files.expiresAt, new Date())))
+      .where(and(eq(files.workspaceId, workspaceId), isNull(files.deletedAt), activeFileFilter()))
       .orderBy(desc(files.createdAt))
       .limit(ctx.queryInt("limit", 60));
     return { files: rows.map((row) => toFileSummary(row.file)) };

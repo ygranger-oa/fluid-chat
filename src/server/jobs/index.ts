@@ -269,7 +269,7 @@ export async function purgeExpiredFiles() {
   const due = await db
     .select()
     .from(files)
-    .where(or(isNotNull(files.deletedAt), lte(files.expiresAt, new Date())))
+    .where(or(isNotNull(files.deletedAt), and(isNotNull(files.expiresAt), lte(files.expiresAt, new Date()))))
     .limit(100);
 
   for (const file of due) {

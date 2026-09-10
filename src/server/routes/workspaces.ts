@@ -24,7 +24,7 @@ import {
 import { toUser, toWorkspace } from "@/lib/realtime";
 import { addDays } from "@/lib/security";
 import { defineRoutes } from "../router";
-import { EXPORT_RETENTION_DAYS } from "../services/file-policy";
+import { activeFileFilter, EXPORT_RETENTION_DAYS } from "../services/file-policy";
 import { toPublicUser, toWorkspaceSummary } from "../services/serializers";
 import { bootstrapWorkspace, createAudit, createWorkspace } from "../services/workspaces";
 import { workspaceById } from "../services/conversations";
@@ -46,6 +46,9 @@ const settingsSchema = z.object({
   retentionDays: z.number().int().min(1).max(3650).nullable().optional(),
   plan: z.enum(["free", "starter", "team", "business"]).optional(),
   seatLimit: z.number().int().positive().optional(),
+  maxUploadMb: z.number().int().min(1).max(1024).optional(),
+  storageLimitMb: z.number().int().min(1).max(102400).optional(),
+  fileRetentionDays: z.number().int().min(0).max(3650).optional(),
   overageAllowed: z.boolean().optional(),
   subscriptionStatus: z.enum(["active", "past_due", "grace_period", "read_only"]).optional(),
   gracePeriodEndsAt: z.coerce.date().nullable().optional(),
@@ -54,7 +57,6 @@ const settingsSchema = z.object({
 
 const ownerOnlyFields = [
   "plan",
-  "seatLimit",
   "overageAllowed",
   "subscriptionStatus",
   "gracePeriodEndsAt",
@@ -277,7 +279,7 @@ export const workspaceRoutes = defineRoutes({
         fileBytes: sql<string>`coalesce(sum(${files.size}), 0)::text`
       })
       .from(files)
-      .where(and(eq(files.workspaceId, workspaceId), isNull(files.deletedAt), gt(files.expiresAt, new Date())));
+      .where(and(eq(files.workspaceId, workspaceId), isNull(files.deletedAt), activeFileFilter()));
     return {
       workspace: toWorkspaceSummary(await workspaceById(workspaceId)),
       usage: {
@@ -428,7 +430,7 @@ export const workspaceRoutes = defineRoutes({
           eq(files.id, input.fileId),
           eq(files.workspaceId, workspaceId),
           isNull(files.deletedAt),
-          gt(files.expiresAt, new Date())
+          activeFileFilter()
         )
       )
       .limit(1);
