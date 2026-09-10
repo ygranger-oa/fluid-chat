@@ -262,7 +262,6 @@ export const inviteRoutes = defineRoutes({
         workspaceId: result.workspaceId,
         type: "invite_accepted",
         actorUserId: user.id,
-        body: `${user.displayName} joined the workspace`,
         userIds: result.adminIds
       });
     }

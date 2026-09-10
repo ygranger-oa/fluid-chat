@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { AtSign, Bell, Bookmark, Clock, Inbox, MessageSquare, PenSquare, Trash2 } from "lucide-react";
 import type { DraftDto, MessageDto, NotificationDto, ReminderDto, ScheduledMessageDto } from "@/shared/types";
 import { api } from "../../api";
-import { formatRelative, compactTimestamp } from "../../format";
+import { formatRelative, formatRelativeInLocale, compactTimestamp } from "../../format";
 import { useI18n } from "../../i18n";
 import { conversationTitle, useApp, useDirectory } from "../../store";
 import { Avatar, EmptyState, Spinner } from "../ui/primitives";
@@ -39,7 +39,7 @@ export function useConversationLabel() {
 
 export function ActivityView() {
   const { state, actions } = useApp();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const directory = useDirectory();
   const label = useConversationLabel();
   const [notifications, setNotifications] = useState<NotificationDto[] | null>(null);
@@ -121,9 +121,9 @@ export function ActivityView() {
                     <strong>{actor?.displayName ?? t("app.fluidFallback")}</strong>
                     <span>{describeNotification(notification.type, t)}</span>
                     <span className="muted">{label(notification.conversationId)}</span>
-                    <time>{formatRelative(notification.createdAt)}</time>
+                    <time>{formatRelativeInLocale(notification.createdAt, language)}</time>
                   </div>
-                  {notification.body ? <p className="activity-body">{notification.body}</p> : null}
+                  {notification.body ? <p className="activity-body">{localizedNotificationBody(notification.body, t)}</p> : null}
                 </div>
               </button>
             );
@@ -132,6 +132,10 @@ export function ActivityView() {
       </div>
     </section>
   );
+}
+
+function localizedNotificationBody(body: string, t: ReturnType<typeof useI18n>["t"]) {
+  return body.replace(/\bjoined the workspace\b/g, t("views.joinedWorkspace"));
 }
 
 function describeNotification(type: string, t: ReturnType<typeof useI18n>["t"]) {

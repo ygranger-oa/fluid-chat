@@ -44,6 +44,24 @@ export function formatRelative(value: string | Date) {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+export function formatRelativeInLocale(value: string | Date, locale: string) {
+  if (locale === "fr") return formatRelativeFr(value);
+  return formatRelative(value);
+}
+
+function formatRelativeFr(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+  const diff = Date.now() - date.getTime();
+  const minutes = Math.round(diff / 60_000);
+  if (minutes < 1) return "à l'instant";
+  if (minutes < 60) return `il y a ${minutes} min`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `il y a ${hours} h`;
+  const days = Math.round(hours / 24);
+  if (days < 7) return `il y a ${days} j`;
+  return date.toLocaleDateString("fr", { month: "short", day: "numeric" });
+}
+
 export function isSameDay(a: Date, b: Date) {
   return (
     a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
