@@ -17,6 +17,8 @@ You can use `--workspace-id` instead of `--workspace-slug`.
 - The workspace is never recreated.
 - Mattermost `town-square` is imported into the existing `general` channel.
 - Public and private channels are created when missing, with their Mattermost members.
+- Mattermost direct and group message channels are imported as Fluid Chat `dm` and `group_dm`
+  conversations using their member set as the idempotency key.
 - Missing users are created from their Mattermost email, username and profile fields, then added to
   the workspace.
 - Messages are idempotent through `clientMessageId = mattermost:<post_id>`, so rerunning the import
@@ -24,6 +26,8 @@ You can use `--workspace-id` instead of `--workspace-slug`.
 - Reactions and files attached to newly imported messages are imported when present in the export.
 - Attachments must be extracted before import. Pass the extracted root with `--attachments-dir`; file
   paths are resolved only under that root.
+- The JSON summary reports matched/created direct and group conversations separately; already imported
+  messages are counted but omitted from `messagesSkippedDetails`.
 
 ## Requirements
 

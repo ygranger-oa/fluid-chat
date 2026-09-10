@@ -78,13 +78,6 @@
       "when": 1789148400000,
       "tag": "0010_workspace_file_limits",
       "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1789148700000,
-      "tag": "0011_workspace_file_retention",
-      "breakpoints": true
     }
   ]
 }

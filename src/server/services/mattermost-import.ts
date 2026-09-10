@@ -37,6 +37,10 @@ export type MattermostImportSummary = {
   usersMatched: number;
   channelsCreated: number;
   channelsMatched: number;
+  directConversationsCreated: number;
+  directConversationsMatched: number;
+  groupConversationsCreated: number;
+  groupConversationsMatched: number;
   membershipsCreated: number;
   messagesCreated: number;
   messagesSkipped: number;
@@ -75,12 +79,19 @@ type MattermostChannel = {
   members?: Array<{ username?: string; roles?: string } | string>;
 };
 
+type MattermostDirectChannel = {
+  participants?: Array<{ username?: string } | string>;
+  shown_by?: string[];
+  header?: string;
+};
+
 type MattermostPost = {
   id?: string;
   post_id?: string;
   user?: string;
   username?: string;
   channel?: string;
+  channel_members?: string[];
   team?: string;
   message?: string;
   create_at?: number;
@@ -110,8 +121,15 @@ type MattermostExport = {
   teams: MattermostTeam[];
   users: MattermostUser[];
   channels: MattermostChannel[];
+  directChannels: MattermostDirectChannel[];
   posts: MattermostPost[];
   channelMembers: Array<{ channel: string; user: string; roles?: string }>;
+};
+
+type MattermostConversationTarget = {
+  key: string;
+  type: "dm" | "group_dm";
+  userIds: string[];
 };
 
 const DEFAULT_SUMMARY: MattermostImportSummary = {
@@ -121,6 +139,10 @@ const DEFAULT_SUMMARY: MattermostImportSummary = {
   usersMatched: 0,
   channelsCreated: 0,
   channelsMatched: 0,
+  directConversationsCreated: 0,
+  directConversationsMatched: 0,
+  groupConversationsCreated: 0,
+  groupConversationsMatched: 0,
   membershipsCreated: 0,
   messagesCreated: 0,
   messagesSkipped: 0,
@@ -161,6 +183,9 @@ export function mattermostPostKey(post: MattermostPost) {
     post.root_id ?? post.original_id ?? "",
     post.message ?? ""
   ];
+  if (post.channel_members && post.channel_members.length > 0) {
+    stableParts.splice(2, 0, mattermostConversationMemberKey(post.channel_members));
+  }
   if (stableParts.every((part) => !part)) return null;
   return `generated:${createHash("sha256").update(JSON.stringify(stableParts)).digest("hex").slice(0, 32)}`;
 }
@@ -169,6 +194,14 @@ export function mattermostReactionEmoji(name: string | undefined) {
   const normalized = name?.trim().toLowerCase().replace(/^:+|:+$/g, "");
   if (!normalized) return null;
   return emojiChar(normalized) ?? null;
+}
+
+export function mattermostConversationMemberKey(userIds: string[]) {
+  return [...new Set(userIds)].sort().join(":");
+}
+
+export function mattermostConversationType(memberCount: number) {
+  return memberCount === 2 ? "dm" : "group_dm";
 }
 
 export async function importMattermostExport(options: MattermostImportOptions): Promise<MattermostImportSummary> {
@@ -187,8 +220,8 @@ export async function importMattermostExport(options: MattermostImportOptions): 
 
   const importer = await importActor(workspace);
   const userByMattermostName = await upsertUsers(workspace, parsed.users, summary);
-  const conversationByChannel = await upsertChannels(workspace, importer, parsed, userByMattermostName, summary);
-  await upsertMessages(workspace, parsed, userByMattermostName, conversationByChannel, options.attachmentsDir, summary);
+  const conversationByMattermostChannel = await upsertConversations(workspace, importer, parsed, userByMattermostName, summary);
+  await upsertMessages(workspace, parsed, userByMattermostName, conversationByMattermostChannel, options.attachmentsDir, summary);
   return summary;
 }
 
@@ -199,17 +232,15 @@ async function previewMattermostImport(
   summary: MattermostImportSummary
 ) {
   const userEmails = parsed.users.flatMap((user) => (user.email ? [normalizeEmail(user.email)] : []));
-  const existingUsers = new Set(
+  const existingUserRows =
     userEmails.length === 0
       ? []
-      : (await db.select({ email: users.email }).from(users).where(inArray(users.email, userEmails))).map(
-          (user) => user.email
-        )
-  );
+      : await db.select({ id: users.id, email: users.email }).from(users).where(inArray(users.email, userEmails));
+  const existingUsers = new Set(existingUserRows.map((user) => user.email));
   summary.usersMatched = parsed.users.filter((user) => user.email && existingUsers.has(normalizeEmail(user.email))).length;
   summary.usersCreated = parsed.users.filter((user) => user.email && !existingUsers.has(normalizeEmail(user.email))).length;
 
-  const channelNames = uniqueChannelNames(parsed.channels);
+  const channelNames = uniqueChannelNames(parsed.channels.filter((channel) => !isMattermostDirectChannel(channel)));
   const existingChannels = new Set(
     channelNames.length === 0
       ? []
@@ -223,6 +254,35 @@ async function previewMattermostImport(
   summary.channelsMatched = channelNames.filter((name) => existingChannels.has(name)).length;
   summary.channelsCreated = channelNames.filter((name) => !existingChannels.has(name)).length;
   summary.membershipsCreated = parsed.channelMembers.length;
+
+  const existingUserIdsByMattermostName = new Map(
+    parsed.users.flatMap((user) => {
+      if (!user.username || !user.email) return [];
+      const email = normalizeEmail(user.email);
+      const existing = existingUserRows.find((row) => row.email === email);
+      return existing ? [[user.username, existing.id] as const] : [];
+    })
+  );
+  const directTargets = previewDirectConversationTargets(parsed, existingUserIdsByMattermostName);
+  const directKeys = directTargets.map((target) => target.key);
+  const existingDirectConversationKeys = new Set(
+    directKeys.length === 0
+      ? []
+      : (
+          await db
+            .select({ memberKey: conversations.memberKey })
+            .from(conversations)
+            .where(and(eq(conversations.workspaceId, workspace.id), inArray(conversations.memberKey, directKeys)))
+        ).flatMap((conversation) => conversation.memberKey ?? [])
+  );
+  for (const target of directTargets) {
+    const matched = existingDirectConversationKeys.has(target.key);
+    if (target.type === "dm") {
+      matched ? (summary.directConversationsMatched += 1) : (summary.directConversationsCreated += 1);
+    } else {
+      matched ? (summary.groupConversationsMatched += 1) : (summary.groupConversationsCreated += 1);
+    }
+  }
 
   const postIds = parsed.posts.flatMap((post) => {
     const postKey = mattermostPostKey(post);
@@ -269,7 +329,7 @@ async function resolveWorkspace(options: MattermostImportOptions) {
 export async function parseMattermostExport(exportPath: string): Promise<MattermostExport> {
   const raw = await readFile(exportPath, "utf8");
   const trimmed = raw.trim();
-  if (!trimmed) return { teams: [], users: [], channels: [], posts: [], channelMembers: [] };
+  if (!trimmed) return { teams: [], users: [], channels: [], directChannels: [], posts: [], channelMembers: [] };
 
   if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
     try {
@@ -280,7 +340,7 @@ export async function parseMattermostExport(exportPath: string): Promise<Matterm
     }
   }
 
-  const parsed: MattermostExport = { teams: [], users: [], channels: [], posts: [], channelMembers: [] };
+  const parsed: MattermostExport = { teams: [], users: [], channels: [], directChannels: [], posts: [], channelMembers: [] };
   const input = createReadStream(exportPath, "utf8");
   const lines = readline.createInterface({ input, crlfDelay: Infinity });
   for await (const line of lines) {
@@ -291,7 +351,7 @@ export async function parseMattermostExport(exportPath: string): Promise<Matterm
 }
 
 function normalizeExport(value: unknown): MattermostExport {
-  const parsed: MattermostExport = { teams: [], users: [], channels: [], posts: [], channelMembers: [] };
+  const parsed: MattermostExport = { teams: [], users: [], channels: [], directChannels: [], posts: [], channelMembers: [] };
   const records = Array.isArray(value) ? value : [value];
   for (const record of records) appendMattermostRecord(parsed, record);
   return parsed;
@@ -303,11 +363,17 @@ function appendMattermostRecord(parsed: MattermostExport, record: unknown) {
   if (Array.isArray(item.teams)) parsed.teams.push(...(item.teams as MattermostTeam[]));
   if (Array.isArray(item.users)) parsed.users.push(...(item.users as MattermostUser[]));
   if (Array.isArray(item.channels)) parsed.channels.push(...(item.channels as MattermostChannel[]));
+  if (Array.isArray(item.direct_channels)) parsed.directChannels.push(...(item.direct_channels as MattermostDirectChannel[]));
   if (Array.isArray(item.posts)) parsed.posts.push(...(item.posts as MattermostPost[]));
+  if (Array.isArray(item.direct_posts)) parsed.posts.push(...(item.direct_posts as MattermostPost[]));
   if (item.type === "team" && item.team) parsed.teams.push(item.team as MattermostTeam);
   if (item.type === "user" && item.user) parsed.users.push(item.user as MattermostUser);
   if (item.type === "channel" && item.channel) parsed.channels.push(item.channel as MattermostChannel);
+  if (item.type === "direct_channel" && item.direct_channel) {
+    parsed.directChannels.push(item.direct_channel as MattermostDirectChannel);
+  }
   if (item.type === "post" && item.post) parsed.posts.push(item.post as MattermostPost);
+  if (item.type === "direct_post" && item.direct_post) parsed.posts.push(item.direct_post as MattermostPost);
   if (item.type === "channel_member" && item.channel_member) {
     parsed.channelMembers.push(item.channel_member as { channel: string; user: string; roles?: string });
   }
@@ -369,6 +435,21 @@ async function upsertUsers(workspace: Workspace, mattermostUsers: MattermostUser
   return result;
 }
 
+async function upsertConversations(
+  workspace: Workspace,
+  importer: User,
+  parsed: MattermostExport,
+  usersByName: Map<string, User>,
+  summary: MattermostImportSummary
+) {
+  const result = await upsertChannels(workspace, importer, parsed, usersByName, summary);
+  const directConversations = await upsertDirectConversations(workspace, importer, parsed, usersByName, summary);
+  for (const [channelName, conversation] of directConversations) {
+    result.set(channelName, conversation);
+  }
+  return result;
+}
+
 async function upsertChannels(
   workspace: Workspace,
   importer: User,
@@ -377,7 +458,7 @@ async function upsertChannels(
   summary: MattermostImportSummary
 ) {
   const result = new Map<string, Conversation>();
-  const channelNames = uniqueChannelNames(parsed.channels);
+  const channelNames = uniqueChannelNames(parsed.channels.filter((channel) => !isMattermostDirectChannel(channel)));
   for (const channelName of channelNames) {
     const source = parsed.channels.find((channel) => mattermostChannelName(channel.name) === channelName);
     const [existing] = await db
@@ -429,8 +510,119 @@ async function upsertChannels(
   return result;
 }
 
+async function upsertDirectConversations(
+  workspace: Workspace,
+  importer: User,
+  parsed: MattermostExport,
+  usersByName: Map<string, User>,
+  summary: MattermostImportSummary
+) {
+  const result = new Map<string, Conversation>();
+  for (const memberNames of uniqueDirectConversationMemberSets(parsed)) {
+    const target = mattermostConversationTarget(memberNames, parsed, usersByName);
+    if (!target || target.userIds.length < 2) continue;
+
+    const [existing] = await db
+      .select()
+      .from(conversations)
+      .where(and(eq(conversations.workspaceId, workspace.id), eq(conversations.memberKey, target.key)))
+      .limit(1);
+
+    let conversation = existing;
+    if (!conversation) {
+      [conversation] = await db
+        .insert(conversations)
+        .values({
+          workspaceId: workspace.id,
+          type: target.type,
+          memberKey: target.key,
+          createdByUserId: importer.id
+        })
+        .returning();
+      if (target.type === "dm") summary.directConversationsCreated += 1;
+      else summary.groupConversationsCreated += 1;
+    } else if (target.type === "dm") {
+      summary.directConversationsMatched += 1;
+    } else {
+      summary.groupConversationsMatched += 1;
+    }
+
+    await db
+      .insert(conversationMembers)
+      .values(
+        target.userIds.map((userId) => ({
+          workspaceId: workspace.id,
+          conversationId: conversation.id,
+          userId,
+          joinedAt: new Date()
+        }))
+      )
+      .onConflictDoUpdate({
+        target: [conversationMembers.conversationId, conversationMembers.userId],
+        set: { leftAt: null, hiddenAt: null, joinedAt: new Date() }
+      });
+    summary.membershipsCreated += target.userIds.length;
+
+    result.set(target.key, conversation);
+  }
+  return result;
+}
+
 function uniqueChannelNames(channelsToImport: MattermostChannel[]) {
   return Array.from(new Set(channelsToImport.map((channel) => mattermostChannelName(channel.name)).filter(Boolean)));
+}
+
+function isMattermostDirectChannel(channel: MattermostChannel) {
+  return channel.type === "D" || channel.type === "G";
+}
+
+function previewDirectConversationTargets(parsed: MattermostExport, userIdsByMattermostName: Map<string, string>) {
+  return uniqueDirectConversationMemberSets(parsed).flatMap((names) => {
+    const userIds = names.flatMap((name) => userIdsByMattermostName.get(name) ?? []);
+    if (userIds.length < 2) return [];
+    return [{ key: mattermostConversationMemberKey(userIds), type: mattermostConversationType(userIds.length) }];
+  });
+}
+
+function mattermostConversationTarget(
+  memberNames: string[],
+  parsed: MattermostExport,
+  usersByName: Map<string, User>
+): MattermostConversationTarget | null {
+  const userIds = Array.from(new Set(memberNames.flatMap((name) => usersByName.get(name)?.id ?? [])));
+  if (userIds.length < 2) return null;
+  return {
+    key: mattermostConversationMemberKey(userIds),
+    type: mattermostConversationType(userIds.length),
+    userIds
+  };
+}
+
+function uniqueDirectConversationMemberSets(parsed: MattermostExport) {
+  const byKey = new Map<string, string[]>();
+  for (const channel of parsed.channels.filter(isMattermostDirectChannel)) {
+    const names = mattermostConversationMemberNames(channel.name ?? "", channel, parsed);
+    if (names.length >= 2) byKey.set(mattermostConversationMemberKey(names), names);
+  }
+  for (const channel of parsed.directChannels) {
+    const names = mattermostDirectChannelMemberNames(channel);
+    if (names.length >= 2) byKey.set(mattermostConversationMemberKey(names), names);
+  }
+  for (const post of parsed.posts) {
+    const names = post.channel_members ?? [];
+    if (names.length >= 2) byKey.set(mattermostConversationMemberKey(names), names);
+  }
+  return Array.from(byKey.values());
+}
+
+function mattermostDirectChannelMemberNames(channel: MattermostDirectChannel) {
+  return Array.from(
+    new Set(
+      (channel.participants ?? []).flatMap((participant) =>
+        typeof participant === "string" ? [participant] : participant.username ? [participant.username] : []
+      )
+    )
+  );
 }
 
 function channelMemberUserIds(
@@ -439,18 +631,31 @@ function channelMemberUserIds(
   parsed: MattermostExport,
   usersByName: Map<string, User>
 ) {
+  return mattermostConversationMemberNames(channelName, channel, parsed).flatMap((name) => usersByName.get(name)?.id ?? []);
+}
+
+function mattermostConversationMemberNames(
+  channelName: string,
+  channel: MattermostChannel | undefined,
+  parsed: MattermostExport
+) {
   const names = new Set<string>();
+  const sourceChannelName = channel?.name;
   for (const member of channel?.members ?? []) {
     if (typeof member === "string") names.add(member);
     else if (member.username) names.add(member.username);
   }
   for (const member of parsed.channelMembers) {
-    if (mattermostChannelName(member.channel) === channelName) names.add(member.user);
+    if (member.channel === sourceChannelName || mattermostChannelName(member.channel) === channelName) {
+      names.add(member.user);
+    }
   }
   for (const post of parsed.posts) {
-    if (mattermostChannelName(post.channel) === channelName && post.user) names.add(post.user);
+    if ((post.channel === sourceChannelName || mattermostChannelName(post.channel) === channelName) && post.user) {
+      names.add(post.user);
+    }
   }
-  return Array.from(names).flatMap((name) => usersByName.get(name)?.id ?? []);
+  return Array.from(names);
 }
 
 async function upsertMessages(
@@ -466,7 +671,7 @@ async function upsertMessages(
   for (const post of orderedPosts) {
     const postKey = mattermostPostKey(post);
     const sender = usersByName.get(post.user ?? post.username ?? "");
-    const conversation = conversationsByChannel.get(mattermostChannelName(post.channel));
+    const conversation = conversationsByChannel.get(mattermostPostConversationKey(post, parsed, usersByName));
     if (!postKey) {
       skipMessage(summary, post, "missing_id");
       continue;
@@ -525,8 +730,25 @@ async function upsertMessages(
   }
 }
 
+function mattermostPostConversationKey(
+  post: MattermostPost,
+  parsed: MattermostExport,
+  usersByName: Map<string, User>
+) {
+  if (post.channel_members && post.channel_members.length >= 2) {
+    const userIds = post.channel_members.flatMap((name) => usersByName.get(name)?.id ?? []);
+    return userIds.length >= 2 ? mattermostConversationMemberKey(userIds) : "";
+  }
+  const source = parsed.channels.find((channel) => channel.name === post.channel);
+  if (source && isMattermostDirectChannel(source)) {
+    return mattermostConversationTarget(mattermostConversationMemberNames(source.name ?? "", source, parsed), parsed, usersByName)?.key ?? post.channel ?? "";
+  }
+  return mattermostChannelName(post.channel);
+}
+
 function skipMessage(summary: MattermostImportSummary, post: MattermostPost, reason: string) {
   summary.messagesSkipped += 1;
+  if (reason === "already_imported") return;
   summary.messagesSkippedDetails.push({
     postId: mattermostPostKey(post),
     reason,

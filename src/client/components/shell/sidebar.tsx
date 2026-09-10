@@ -24,7 +24,7 @@ import {
   ArrowUp,
   Users
 } from "lucide-react";
-import type { ConversationSummary } from "@/shared/types";
+import type { ConversationSummary, PublicUser } from "@/shared/types";
 import { api } from "../../api";
 import { useI18n } from "../../i18n";
 import { conversationTitle, useApp, useDirectory, type View } from "../../store";
@@ -432,7 +432,7 @@ function ConversationRow({
   const isAdmin = state.bootstrap?.role === "owner" || state.bootstrap?.role === "admin";
   const active = state.view.kind === "conversation" && state.view.conversationId === conversation.id;
   const unread = conversation.unreadCount > 0;
-  const title = conversationTitle(conversation, directory, state.session?.id);
+  const title = sidebarConversationTitle(conversation, directory, state.session?.id);
   const otherId = conversation.memberIds.find((id) => id !== state.session?.id);
   const other = conversation.type === "dm" && otherId ? directory.get(otherId) : undefined;
   const draft = state.drafts[`${conversation.id}:root`];
@@ -620,6 +620,23 @@ function ConversationRow({
       </Popover>
     </div>
   );
+}
+
+function sidebarConversationTitle(
+  conversation: ConversationSummary,
+  directory: Map<string, PublicUser>,
+  currentUserId?: string
+) {
+  if (conversation.channel) return conversation.channel.name;
+  if (conversation.name) return conversation.name;
+  const others = conversation.memberIds.filter((id) => id !== currentUserId);
+  if (others.length === 0) return "You";
+  const identifiers = others.map((id) => {
+    const user = directory.get(id);
+    return user?.handle ? `@${user.handle}` : user?.displayName ?? "Someone";
+  });
+  if (identifiers.length <= 3) return identifiers.join(", ");
+  return `${identifiers.slice(0, 3).join(", ")} +${identifiers.length - 3}`;
 }
 
 function RenameSidebarItemModal({ target, onClose }: { target: RenameTarget; onClose: () => void }) {

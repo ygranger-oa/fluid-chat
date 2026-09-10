@@ -4,6 +4,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   mattermostChannelName,
+  mattermostConversationMemberKey,
+  mattermostConversationType,
   mattermostDisplayName,
   mattermostPostKey,
   mattermostReactionEmoji,
@@ -54,6 +56,15 @@ describe("Mattermost import mapping", () => {
     expect(mattermostReactionEmoji("does_not_exist")).toBeNull();
   });
 
+  it("builds deterministic direct conversation member keys", () => {
+    expect(mattermostConversationMemberKey(["u2", "u1", "u2"])).toBe("u1:u2");
+  });
+
+  it("maps Mattermost direct and group channels to local conversation types", () => {
+    expect(mattermostConversationType(2)).toBe("dm");
+    expect(mattermostConversationType(3)).toBe("group_dm");
+  });
+
   it("parses Mattermost JSONL exports", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "fluid-mattermost-"));
     const exportPath = path.join(dir, "export.jsonl");
@@ -74,6 +85,73 @@ describe("Mattermost import mapping", () => {
       expect(parsed.users).toHaveLength(1);
       expect(parsed.channels).toHaveLength(1);
       expect(parsed.posts).toHaveLength(1);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("parses Mattermost direct and group channels from JSONL exports", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "fluid-mattermost-dms-"));
+    const exportPath = path.join(dir, "export.jsonl");
+    await writeFile(
+      exportPath,
+      [
+        JSON.stringify({ type: "channel", channel: { name: "alice__bob", type: "D" } }),
+        JSON.stringify({ type: "channel", channel: { name: "group-1", type: "G" } }),
+        JSON.stringify({ type: "channel_member", channel_member: { channel: "alice__bob", user: "alice" } }),
+        JSON.stringify({ type: "channel_member", channel_member: { channel: "alice__bob", user: "bob" } })
+      ].join("\n")
+    );
+
+    try {
+      const parsed = await parseMattermostExport(exportPath);
+
+      expect(parsed.channels.map((channel) => channel.type)).toEqual(["D", "G"]);
+      expect(parsed.channelMembers).toEqual([
+        { channel: "alice__bob", user: "alice" },
+        { channel: "alice__bob", user: "bob" }
+      ]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("parses Mattermost direct_channel and direct_post records from JSONL exports", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "fluid-mattermost-direct-records-"));
+    const exportPath = path.join(dir, "export.jsonl");
+    await writeFile(
+      exportPath,
+      [
+        JSON.stringify({
+          type: "direct_channel",
+          direct_channel: { participants: [{ username: "alice" }, { username: "bob" }] }
+        }),
+        JSON.stringify({
+          type: "direct_post",
+          direct_post: {
+            user: "alice",
+            channel_members: ["alice", "bob"],
+            create_at: 1719819493813,
+            message: "Hello"
+          }
+        })
+      ].join("\n")
+    );
+
+    try {
+      const parsed = await parseMattermostExport(exportPath);
+
+      expect(parsed.directChannels).toHaveLength(1);
+      expect(parsed.directChannels[0].participants).toEqual([{ username: "alice" }, { username: "bob" }]);
+      expect(parsed.posts).toEqual([
+        {
+          user: "alice",
+          channel_members: ["alice", "bob"],
+          create_at: 1719819493813,
+          message: "Hello"
+        }
+      ]);
+      expect(mattermostPostKey(parsed.posts[0])).toBe(mattermostPostKey({ ...parsed.posts[0] }));
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -141,6 +219,10 @@ describe("Mattermost import mapping", () => {
       usersMatched: 0,
       channelsCreated: 0,
       channelsMatched: 0,
+      directConversationsCreated: 0,
+      directConversationsMatched: 0,
+      groupConversationsCreated: 0,
+      groupConversationsMatched: 0,
       membershipsCreated: 0,
       messagesCreated: 0,
       messagesSkipped: 0,
