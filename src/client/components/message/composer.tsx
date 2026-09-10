@@ -252,6 +252,15 @@ export function Composer({
     replaceText(next, start + prefix.length);
   };
 
+  const insertLineBreak = () => {
+    const element = textareaRef.current;
+    if (!element) return;
+    const start = element.selectionStart;
+    const end = element.selectionEnd;
+    const next = `${text.slice(0, start)}\n${text.slice(end)}`;
+    replaceText(next, start + 1);
+  };
+
   const uploadFiles = async (fileList: FileList | File[]) => {
     const workspaceId = state.workspaceId;
     if (!workspaceId) return;
@@ -333,12 +342,12 @@ export function Composer({
       }
     }
 
-    if (event.key === "Enter" && !event.shiftKey && enterToSend) {
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
-      void send();
+      insertLineBreak();
       return;
     }
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+    if (event.key === "Enter" && !event.shiftKey && enterToSend) {
       event.preventDefault();
       void send();
       return;

@@ -1262,6 +1262,8 @@ textarea:focus {
 
 .rich-text p {
   margin: 0 0 4px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .rich-text p:last-child {

@@ -906,7 +906,7 @@ const SHORTCUTS = [
   ["⇧Esc", "modals.markEverythingRead"],
   ["⌘B / ⌘I", "modals.boldItalic"],
   ["Enter", "modals.sendMessage"],
-  ["Shift+Enter", "modals.newLine"],
+  ["Shift+Enter / Ctrl+Enter", "modals.newLine"],
   ["↑", "modals.editLastMessage"],
   ["Esc", "modals.closePanelModalThread"]
 ] as const;

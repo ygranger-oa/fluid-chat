@@ -54,6 +54,11 @@ describe("message parsing", () => {
     expect(code.type === "codeblock" && code.value).toBe("const a = 1;");
   });
 
+  it("preserves manual line breaks inside paragraphs", () => {
+    const [block] = parseMessage("first line\nsecond line");
+    expect(block).toEqual({ type: "paragraph", children: [{ type: "text", value: "first line\nsecond line" }] });
+  });
+
   it("numbers ordered lists separately from bullets", () => {
     const blocks = parseMessage("1. first\n2. second");
     expect(blocks[0].type === "list" && blocks[0].ordered).toBe(true);
