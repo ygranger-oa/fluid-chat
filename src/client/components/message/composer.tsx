@@ -20,6 +20,7 @@ import {
   List,
   ListOrdered,
   Paperclip,
+  ListChecks,
   Quote,
   Send,
   Smile,
@@ -569,6 +570,11 @@ export function Composer({
               >
                 {(close) => <GifPicker workspaceId={state.workspaceId!} onPick={pickGif} onClose={close} />}
               </Popover>
+            ) : null}
+            {!parentMessageId ? (
+              <IconButton label={t("composer.createPoll")} onClick={() => actions.setModal({ kind: "poll", conversationId })}>
+                <ListChecks size={17} />
+              </IconButton>
             ) : null}
             {parentMessageId ? (
               <label className="broadcast-toggle">

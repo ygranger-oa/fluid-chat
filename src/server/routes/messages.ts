@@ -4,6 +4,7 @@ import { db } from "@/db/client";
 import { messagePins, messageReactions, messages, reminders, savedItems } from "@/db/schema";
 import type { Message } from "@/db/schema";
 import { HttpError, json } from "@/lib/http";
+import type { PollMetadata } from "@/shared/types";
 import {
   isModerator,
   requireConversationMember,
@@ -16,6 +17,7 @@ import { withReacted } from "@/shared/reactions";
 import { defineRoutes } from "../router";
 import {
   createMessage,
+  BROADCAST_VIEWER_ID,
   deleteMessage,
   hydrateMessageById,
   listThreadMessages,
@@ -33,6 +35,34 @@ async function loadMessage(messageId: string): Promise<Message> {
   const [message] = await db.select().from(messages).where(eq(messages.id, messageId)).limit(1);
   if (!message) throw new HttpError(404, "Message not found", "not_found");
   return message;
+}
+
+const pollSettingsSchema = z.object({
+  allowMultipleVotes: z.boolean(),
+  showTotalVotes: z.boolean(),
+  showVotesPerOption: z.boolean(),
+  showVoters: z.boolean(),
+  showVotersPerOption: z.boolean(),
+  closesAt: z.coerce.date().nullable().optional()
+});
+
+const pollUpdateSchema = z.object({
+  question: z.string().trim().min(1).max(300),
+  options: z.array(z.object({ id: z.string().min(1), text: z.string().trim().min(1).max(160) })).min(2).max(12),
+  settings: pollSettingsSchema
+});
+
+function pollMetadata(message: Message): PollMetadata {
+  const metadata = message.metadata as PollMetadata | null;
+  if (metadata?.kind !== "poll") throw new HttpError(400, "Message is not a poll", "not_poll");
+  return metadata;
+}
+
+function assertPollOpen(metadata: PollMetadata) {
+  const closesAt = metadata.poll.settings.closesAt;
+  if (closesAt && new Date(closesAt).getTime() <= Date.now()) {
+    throw new HttpError(400, "This poll is closed", "poll_closed");
+  }
 }
 
 export const messageRoutes = defineRoutes({
@@ -58,6 +88,75 @@ export const messageRoutes = defineRoutes({
     const member = await requireWorkspaceMember(message.workspaceId, user.id);
     await deleteMessage({ message, actor: user, isModerator: isModerator(member) });
     return { ok: true };
+  },
+
+  "PATCH /messages/:messageId/poll": async (ctx) => {
+    const user = await ctx.user();
+    const message = await loadMessage(ctx.param("messageId"));
+    await requireConversationMember(message.conversationId, user.id);
+    const metadata = pollMetadata(message);
+    const input = await ctx.input(pollUpdateSchema);
+    if (message.senderId !== user.id) throw new HttpError(403, "Only the poll creator can edit it", "not_author");
+    if (message.deletedAt) throw new HttpError(400, "Deleted messages cannot be edited", "message_deleted");
+
+    const optionIds = new Set(input.options.map((option) => option.id));
+    const nextVotes = Object.fromEntries(
+      Object.entries(metadata.poll.votes).map(([userId, votes]) => [userId, votes.filter((optionId) => optionIds.has(optionId))])
+    );
+    const nextMetadata: PollMetadata = {
+      kind: "poll",
+      poll: {
+        question: input.question,
+        options: input.options,
+        settings: {
+          ...input.settings,
+          closesAt: input.settings.closesAt ? input.settings.closesAt.toISOString() : null
+        },
+        votes: nextVotes
+      }
+    };
+
+    return { message: await updateMessage({ message, editor: user, bodyText: input.question, metadata: nextMetadata }) };
+  },
+
+  "POST /messages/:messageId/poll/vote": async (ctx) => {
+    const user = await ctx.user();
+    const message = await loadMessage(ctx.param("messageId"));
+    await resolveConversationAccess(message.conversationId, user.id);
+    const metadata = pollMetadata(message);
+    assertPollOpen(metadata);
+    const input = await ctx.input(z.object({ optionIds: z.array(z.string().min(1)).min(0).max(12) }));
+    const valid = new Set(metadata.poll.options.map((option) => option.id));
+    const optionIds = Array.from(new Set(input.optionIds)).filter((optionId) => valid.has(optionId));
+    if (!metadata.poll.settings.allowMultipleVotes && optionIds.length > 1) {
+      throw new HttpError(400, "Pick one answer for this poll", "single_vote_only");
+    }
+
+    const nextMetadata: PollMetadata = {
+      ...metadata,
+      poll: {
+        ...metadata.poll,
+        votes: {
+          ...metadata.poll.votes,
+          [user.id]: optionIds
+        }
+      }
+    };
+    if (optionIds.length === 0) delete nextMetadata.poll.votes[user.id];
+
+    const [updated] = await db
+      .update(messages)
+      .set({ metadata: nextMetadata })
+      .where(eq(messages.id, message.id))
+      .returning();
+    const hydrated = await hydrateMessageById(updated.id, user.id);
+    const broadcast = await hydrateMessageById(updated.id, BROADCAST_VIEWER_ID);
+    await toConversation(updated.conversationId, {
+      type: "message.updated",
+      conversationId: updated.conversationId,
+      message: broadcast
+    });
+    return { message: hydrated };
   },
 
   "GET /messages/:messageId/thread": async (ctx) => {

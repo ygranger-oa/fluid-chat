@@ -154,6 +154,30 @@ export type ThreadSummary = {
   following: boolean;
 };
 
+export type PollOption = {
+  id: string;
+  text: string;
+};
+
+export type PollSettings = {
+  allowMultipleVotes: boolean;
+  showTotalVotes: boolean;
+  showVotesPerOption: boolean;
+  showVoters: boolean;
+  showVotersPerOption: boolean;
+  closesAt: string | null;
+};
+
+export type PollMetadata = {
+  kind: "poll";
+  poll: {
+    question: string;
+    options: PollOption[];
+    settings: PollSettings;
+    votes: Record<string, string[]>;
+  };
+};
+
 export type MessageDto = {
   id: string;
   workspaceId: string;

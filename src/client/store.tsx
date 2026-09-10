@@ -87,6 +87,7 @@ export type ModalState =
   | { kind: "status" }
   | { kind: "profile-editor" }
   | { kind: "schedule"; conversationId: string; bodyText: string; parentMessageId: string | null }
+  | { kind: "poll"; conversationId: string; messageId?: string }
   | { kind: "share"; messageId: string }
   | { kind: "create-workspace" }
   | null;

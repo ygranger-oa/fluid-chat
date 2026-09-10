@@ -20,6 +20,7 @@ import {
   InviteModal,
   NewChannelModal,
   NewDmModal,
+  PollModal,
   PreferencesModal,
   ProfileEditorModal,
   ScheduleModal,
@@ -155,6 +156,8 @@ function Modals() {
           onClose={close}
         />
       );
+    case "poll":
+      return <PollModal conversationId={modal.conversationId} messageId={modal.messageId} onClose={close} />;
     case "share":
       return <ShareModal messageId={modal.messageId} onClose={close} />;
     default:

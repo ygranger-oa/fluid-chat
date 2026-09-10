@@ -7,6 +7,8 @@ import type {
   FileSummary,
   GifResult,
   MessageDto,
+  PollOption,
+  PollSettings,
   NotificationDto,
   PublicUser,
   ReactionSummary,
@@ -295,6 +297,10 @@ export const api = {
         fileIds?: string[];
       }
     ) => post<{ message?: MessageDto; command?: SlashOutcome }>(`/conversations/${conversationId}/messages`, input),
+    createPoll: (
+      conversationId: string,
+      input: { question: string; options: string[]; settings: Omit<PollSettings, "closesAt"> & { closesAt?: string | null } }
+    ) => post<{ message: MessageDto }>(`/conversations/${conversationId}/polls`, input),
     markRead: (conversationId: string, messageId?: string) =>
       post<{ lastReadAt: string }>(`/conversations/${conversationId}/read`, { messageId }),
     markUnread: (conversationId: string, beforeMessageId?: string) =>
@@ -326,6 +332,12 @@ export const api = {
   messages: {
     thread: (messageId: string) => get<{ messages: MessageDto[] }>(`/messages/${messageId}/thread`),
     update: (messageId: string, bodyText: string) => patch<{ message: MessageDto }>(`/messages/${messageId}`, { bodyText }),
+    updatePoll: (
+      messageId: string,
+      input: { question: string; options: PollOption[]; settings: Omit<PollSettings, "closesAt"> & { closesAt?: string | null } }
+    ) => patch<{ message: MessageDto }>(`/messages/${messageId}/poll`, input),
+    votePoll: (messageId: string, optionIds: string[]) =>
+      post<{ message: MessageDto }>(`/messages/${messageId}/poll/vote`, { optionIds }),
     remove: (messageId: string) => del<{ ok: true }>(`/messages/${messageId}`),
     addReaction: (messageId: string, emoji: string) =>
       post<{ reactions: ReactionSummary[] }>(`/messages/${messageId}/reactions`, { emoji }),

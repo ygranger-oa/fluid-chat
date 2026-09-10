@@ -46,6 +46,37 @@ const sendSchema = z.object({
   fileIds: z.array(z.string().uuid()).max(10).optional()
 });
 
+const pollSettingsSchema = z.object({
+  allowMultipleVotes: z.boolean().default(false),
+  showTotalVotes: z.boolean().default(true),
+  showVotesPerOption: z.boolean().default(true),
+  showVoters: z.boolean().default(false),
+  showVotersPerOption: z.boolean().default(false),
+  closesAt: z.coerce.date().nullable().optional()
+});
+
+const pollSchema = z.object({
+  question: z.string().trim().min(1).max(300),
+  options: z.array(z.string().trim().min(1).max(160)).min(2).max(12),
+  settings: pollSettingsSchema
+});
+
+function buildPollMetadata(input: z.infer<typeof pollSchema>) {
+  const options = input.options.map((text) => ({ id: crypto.randomUUID(), text }));
+  return {
+    kind: "poll" as const,
+    poll: {
+      question: input.question,
+      options,
+      settings: {
+        ...input.settings,
+        closesAt: input.settings.closesAt ? input.settings.closesAt.toISOString() : null
+      },
+      votes: {}
+    }
+  };
+}
+
 export const conversationRoutes = defineRoutes({
   "GET /workspaces/:workspaceId/conversations": async (ctx) => {
     const user = await ctx.user();
@@ -141,6 +172,25 @@ export const conversationRoutes = defineRoutes({
       parentMessageId: input.parentMessageId,
       threadBroadcast: input.threadBroadcast,
       fileIds: input.fileIds
+    });
+    await markConversationRead({ conversationId, userId: user.id, messageId: message.id });
+    return json({ message }, 201);
+  },
+
+  "POST /conversations/:conversationId/polls": async (ctx) => {
+    const user = await ctx.user();
+    const conversationId = ctx.param("conversationId");
+    const access = await resolveConversationAccess(conversationId, user.id);
+    const input = await ctx.input(pollSchema);
+
+    await assertCanPost(access.conversation, user.id);
+    await ensureConversationMembership(access, user.id);
+
+    const message = await createMessage({
+      conversation: access.conversation,
+      sender: user,
+      bodyText: input.question,
+      metadata: buildPollMetadata(input)
     });
     await markConversationRead({ conversationId, userId: user.id, messageId: message.id });
     return json({ message }, 201);

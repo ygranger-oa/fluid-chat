@@ -17,7 +17,7 @@ import { HttpError } from "@/lib/http";
 import { toConversation, toUsers } from "@/lib/realtime";
 import { toPlainText } from "@/shared/markdown";
 import { groupReactions, withReacted } from "@/shared/reactions";
-import type { MessageDto, ReactionGroup } from "@/shared/types";
+import type { MessageDto, PollMetadata, ReactionGroup } from "@/shared/types";
 import { requireWorkspaceMember } from "@/lib/permissions";
 import { requireWorkspaceWritable } from "@/lib/billing";
 import { deliverableRecipients, keywordRecipients, notify } from "./notifications";
@@ -26,6 +26,7 @@ import { followedThreadIds, threadFollowersFor } from "./threads";
 import { toFileSummary, toIso } from "./serializers";
 
 export const MESSAGE_PAGE_SIZE = 50;
+export const BROADCAST_VIEWER_ID = "00000000-0000-0000-0000-000000000000";
 
 /* -------------------------------------------------------------------------- */
 /* Reactions                                                                   */
@@ -146,7 +147,7 @@ export async function hydrateMessages(rows: Message[], viewerId: string): Promis
     clientMessageId: row.clientMessageId,
     type: row.type,
     bodyText: row.deletedAt ? "" : row.bodyText,
-    metadata: (row.metadata as Record<string, unknown> | null) ?? null,
+    metadata: serializeMessageMetadata(row.metadata as Record<string, unknown> | null, viewerId),
     threadBroadcast: row.threadBroadcast,
     editedAt: toIso(row.editedAt),
     deletedAt: toIso(row.deletedAt),
@@ -163,6 +164,39 @@ export async function hydrateMessages(rows: Message[], viewerId: string): Promis
     pinned: pinned.has(row.id),
     saved: saved.has(row.id)
   }));
+}
+
+function serializeMessageMetadata(metadata: Record<string, unknown> | null, viewerId: string): Record<string, unknown> | null {
+  const pollMetadata = metadata as PollMetadata | null;
+  if (pollMetadata?.kind !== "poll") return metadata ?? null;
+
+  const { poll } = pollMetadata;
+  const visibleVotes: Record<string, string[]> = {};
+  let anonymousIndex = 0;
+
+  for (const [userId, optionIds] of Object.entries(poll.votes ?? {})) {
+    if (userId === viewerId) {
+      visibleVotes[userId] = optionIds;
+      continue;
+    }
+    if (poll.settings.showVotersPerOption) {
+      visibleVotes[userId] = optionIds;
+    } else if (poll.settings.showVoters) {
+      visibleVotes[userId] = [];
+    } else if (poll.settings.showVotesPerOption) {
+      visibleVotes[`anonymous-${anonymousIndex++}`] = optionIds;
+    } else if (poll.settings.showTotalVotes) {
+      visibleVotes[`anonymous-${anonymousIndex++}`] = [];
+    }
+  }
+
+  return {
+    ...pollMetadata,
+    poll: {
+      ...poll,
+      votes: visibleVotes
+    }
+  };
 }
 
 export async function hydrateMessageById(messageId: string, viewerId: string) {
@@ -463,7 +497,7 @@ export async function postSystemMessage(options: {
   return dto;
 }
 
-export async function updateMessage(options: { message: Message; editor: User; bodyText: string }) {
+export async function updateMessage(options: { message: Message; editor: User; bodyText: string; metadata?: Record<string, unknown> | null }) {
   if (options.message.senderId !== options.editor.id) {
     throw new HttpError(403, "Only the author can edit this message", "not_author");
   }
@@ -473,16 +507,17 @@ export async function updateMessage(options: { message: Message; editor: User; b
 
   const [updated] = await db
     .update(messages)
-    .set({ bodyText, editedAt: new Date() })
+    .set({ bodyText, metadata: options.metadata === undefined ? undefined : options.metadata, editedAt: new Date() })
     .where(eq(messages.id, options.message.id))
     .returning();
   await db.delete(linkPreviews).where(eq(linkPreviews.messageId, updated.id));
 
   const [dto] = await hydrateMessages([updated], options.editor.id);
+  const [broadcastDto] = await hydrateMessages([updated], BROADCAST_VIEWER_ID);
   await toConversation(updated.conversationId, {
     type: "message.updated",
     conversationId: updated.conversationId,
-    message: dto
+    message: broadcastDto
   });
   return dto;
 }

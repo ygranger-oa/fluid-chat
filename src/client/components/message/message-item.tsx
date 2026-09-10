@@ -27,6 +27,7 @@ import { useApp, useDirectory, useMentionDirectory } from "../../store";
 import { Avatar, IconButton, MenuDivider, MenuItem, Popover } from "../ui/primitives";
 import { EmojiPicker } from "../ui/emoji-picker";
 import { ImagePreview } from "./image-preview";
+import { PollMessage } from "./poll-message";
 import { MessageReactions, QuickReactions } from "./reactions";
 import { EmojiValue, RichText } from "./rich-text";
 
@@ -63,6 +64,7 @@ export function MessageItem({
   const canModerate = role === "owner" || role === "admin";
   const pending = (message.metadata as { pending?: boolean } | null)?.pending === true;
   const isMeMessage = (message.metadata as { subtype?: string } | null)?.subtype === "me_message";
+  const isPoll = (message.metadata as { kind?: string } | null)?.kind === "poll";
   const sharedId = (message.metadata as { sharedMessageId?: string } | null)?.sharedMessageId;
   const unavailable = sender?.workspaceStatus === "removed" || sender?.workspaceStatus === "suspended";
 
@@ -179,7 +181,7 @@ export function MessageItem({
           </form>
         ) : (
           <div className={isMeMessage ? "message-body is-action" : "message-body"}>
-            <RichText text={message.bodyText} />
+            {isPoll ? <PollMessage message={message} /> : <RichText text={message.bodyText} />}
           </div>
         )}
 
@@ -306,7 +308,8 @@ export function MessageItem({
               {isAuthor ? (
                 <MenuItem
                   onClick={() => {
-                    setEditing(true);
+                    if (isPoll) actions.setModal({ kind: "poll", conversationId: message.conversationId, messageId: message.id });
+                    else setEditing(true);
                     close();
                   }}
                 >

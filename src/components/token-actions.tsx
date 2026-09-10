@@ -8,6 +8,13 @@ function errorText(error: unknown, fallback: string) {
   return error instanceof ApiError ? error.message : error instanceof Error ? error.message : fallback;
 }
 
+function inviteErrorText(error: unknown, t: ReturnType<typeof useI18n>["t"], fallback: string) {
+  if (error instanceof ApiError && error.code === "seat_limit_reached") {
+    return t("tokens.seatLimitReached");
+  }
+  return errorText(error, fallback);
+}
+
 export function InviteAccept({ token }: { token: string }) {
   return (
     <I18nProvider preferences={null}>
@@ -26,6 +33,7 @@ function InviteAcceptContent({ token }: { token: string }) {
   const [displayName, setDisplayName] = useState("");
   const [signedIn, setSignedIn] = useState(false);
   const [accepted, setAccepted] = useState(false);
+  const [accepting, setAccepting] = useState(false);
 
   useEffect(() => {
     api.invites
@@ -43,12 +51,16 @@ function InviteAcceptContent({ token }: { token: string }) {
   }, [token]);
 
   async function accept() {
+    if (accepting || accepted) return;
+    setAccepting(true);
     try {
       await api.invites.accept(token);
       setAccepted(true);
       setMessage(t("tokens.invitationAcceptedMessage"));
     } catch (error) {
-      setMessage(errorText(error, t("tokens.acceptFailed")));
+      setMessage(inviteErrorText(error, t, t("tokens.acceptFailed")));
+    } finally {
+      setAccepting(false);
     }
   }
 
@@ -74,8 +86,12 @@ function InviteAcceptContent({ token }: { token: string }) {
       <section className="auth-panel">
         {signedIn ? (
           <div className="stack-form">
-            <button type="button" className="button primary" onClick={accept} disabled={accepted}>
-              {accepted ? t("tokens.invitationAccepted") : t("tokens.acceptInvitation")}
+            <button type="button" className="button primary" onClick={accept} disabled={accepted || accepting}>
+              {accepted
+                ? t("tokens.invitationAccepted")
+                : accepting
+                  ? t("tokens.acceptingInvitation")
+                  : t("tokens.acceptInvitation")}
             </button>
             <a className="link-button" href="/">
               {t("tokens.openFluidChat")}

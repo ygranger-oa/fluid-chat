@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, Copy, Hash, Lock } from "lucide-react";
+import { Check, Copy, Hash, Lock, Plus, Trash2 } from "lucide-react";
+import type { PollMetadata, PollOption } from "@/shared/types";
 import { api } from "../../api";
 import { track } from "../../analytics";
 import { EMOJI_CATEGORIES } from "../../emoji";
-import { useI18n } from "../../i18n";
+import { useI18n, type TranslationKey } from "../../i18n";
 import { conversationTitle, useApp, useDirectory } from "../../store";
 import { Avatar, Modal } from "../ui/primitives";
 import { RichText } from "../message/rich-text";
@@ -844,6 +845,136 @@ export function ScheduleModal({
       >
         {t("modals.schedule")}
       </button>
+    </Modal>
+  );
+}
+
+export function PollModal({ conversationId, messageId, onClose }: { conversationId: string; messageId?: string; onClose: () => void }) {
+  const { state, actions } = useApp();
+  const { t } = useI18n();
+  const existing = messageId
+    ? state.messages[conversationId]?.items.find((message) => message.id === messageId) ??
+      Object.values(state.threads).flat().find((message) => message.id === messageId)
+    : null;
+  const poll = existing?.metadata as PollMetadata | null;
+  const [question, setQuestion] = useState(poll?.kind === "poll" ? poll.poll.question : "");
+  const [options, setOptions] = useState<PollOption[]>(
+    poll?.kind === "poll" ? poll.poll.options : [{ id: crypto.randomUUID(), text: "" }, { id: crypto.randomUUID(), text: "" }]
+  );
+  const [settings, setSettings] = useState({
+    allowMultipleVotes: poll?.kind === "poll" ? poll.poll.settings.allowMultipleVotes : false,
+    showTotalVotes: poll?.kind === "poll" ? poll.poll.settings.showTotalVotes : true,
+    showVotesPerOption: poll?.kind === "poll" ? poll.poll.settings.showVotesPerOption : true,
+    showVoters: poll?.kind === "poll" ? poll.poll.settings.showVoters : false,
+    showVotersPerOption: poll?.kind === "poll" ? poll.poll.settings.showVotersPerOption : false,
+    closesAt: poll?.kind === "poll" && poll.poll.settings.closesAt ? poll.poll.settings.closesAt.slice(0, 16) : ""
+  });
+  const [busy, setBusy] = useState(false);
+
+  const validOptions = options.map((option) => ({ ...option, text: option.text.trim() })).filter((option) => option.text);
+  const canSubmit = question.trim().length > 0 && validOptions.length >= 2 && !busy;
+
+  return (
+    <Modal title={messageId ? t("poll.editPoll") : t("poll.createPoll")} onClose={onClose} width={640}>
+      <form
+        className="stack-form poll-form"
+        onSubmit={async (event) => {
+          event.preventDefault();
+          if (!canSubmit) return;
+          setBusy(true);
+          const payload = {
+            question: question.trim(),
+            options: validOptions,
+            settings: {
+              ...settings,
+              closesAt: settings.closesAt ? new Date(settings.closesAt).toISOString() : null
+            }
+          };
+          try {
+            const { message } =
+              messageId && poll?.kind === "poll"
+                ? await api.messages.updatePoll(messageId, payload)
+                : await api.conversations.createPoll(conversationId, {
+                    question: payload.question,
+                    options: payload.options.map((option) => option.text),
+                    settings: payload.settings
+                  });
+            actions.upsertMessage(message);
+            actions.toast(messageId ? t("poll.updated") : t("poll.created"), "success");
+            onClose();
+          } catch (error) {
+            actions.fail(error);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <label className="field">
+          {t("poll.question")}
+          <input value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={300} required autoFocus />
+        </label>
+        <div className="field">
+          {t("poll.answers")}
+          <div className="poll-option-editor">
+            {options.map((option, index) => (
+              <div key={option.id} className="poll-option-row">
+                <input
+                  value={option.text}
+                  onChange={(event) =>
+                    setOptions((current) => current.map((entry) => (entry.id === option.id ? { ...entry, text: event.target.value } : entry)))
+                  }
+                  placeholder={t("poll.answerPlaceholder", { number: index + 1 })}
+                  maxLength={160}
+                />
+                <button
+                  type="button"
+                  className="icon-button"
+                  aria-label={t("poll.removeAnswer")}
+                  disabled={options.length <= 2}
+                  onClick={() => setOptions((current) => current.filter((entry) => entry.id !== option.id))}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="button ghost"
+            disabled={options.length >= 12}
+            onClick={() => setOptions((current) => [...current, { id: crypto.randomUUID(), text: "" }])}
+          >
+            <Plus size={14} /> {t("poll.addAnswer")}
+          </button>
+        </div>
+        {(
+          [
+            ["allowMultipleVotes", "poll.allowMultipleVotes"],
+            ["showTotalVotes", "poll.showTotalVotes"],
+            ["showVotesPerOption", "poll.showVotesPerOption"],
+            ["showVoters", "poll.showVoters"],
+            ["showVotersPerOption", "poll.showVotersPerOption"]
+          ] as Array<[keyof typeof settings, TranslationKey]>
+        ).map(([key, label]) => (
+          <label key={key} className="checkbox-field">
+            <input
+              type="checkbox"
+              checked={Boolean(settings[key])}
+              onChange={(event) => setSettings((current) => ({ ...current, [key]: event.target.checked }))}
+            />
+            <span>
+              <strong>{t(label)}</strong>
+            </span>
+          </label>
+        ))}
+        <label className="field">
+          {t("poll.closesAt")} <span className="optional">{t("modals.optional")}</span>
+          <input type="datetime-local" value={settings.closesAt} onChange={(event) => setSettings({ ...settings, closesAt: event.target.value })} />
+        </label>
+        <button type="submit" className="button primary" disabled={!canSubmit}>
+          {messageId ? t("poll.savePoll") : t("poll.publishPoll")}
+        </button>
+      </form>
     </Modal>
   );
 }
