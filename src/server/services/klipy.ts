@@ -2,31 +2,16 @@ import { HttpError } from "@/lib/http";
 
 /**
  * Klipy (klipy.com) GIF search, server-side only — the app key must never reach
- * the browser. Search/trending calls return lightweight metadata the client
- * renders as a picker grid; the chosen GIF is copied into our own storage by
- * `/workspaces/:id/gifs/import` (see routes/gifs.ts) rather than being linked
- * to directly, so a message's media survives Klipy being unreachable or the
- * key being revoked later, exactly like every other file attachment.
+ * the browser. A picked result is never fetched or stored server-side: the
+ * client turns it straight into a `![title](url)` link in the message body
+ * (see the composer's GIF picker and `src/shared/markdown.ts`), so this module
+ * only ever proxies the search/trending listing.
  */
 
 const KLIPY_BASE_URL = "https://api.klipy.com/api/v1";
 
-// Domains Klipy documents for API and asset delivery. `/gifs/import` refuses
-// to fetch anything else, which is what keeps that route from being an open
-// SSRF proxy for a client-supplied URL.
-const KLIPY_ASSET_HOSTS = new Set(["api.klipy.com", "static.klipy.com", "static1.klipy.com", "static2.klipy.com"]);
-
 export function klipyConfigured() {
   return Boolean(process.env.KLIPY_API_KEY);
-}
-
-export function isKlipyAssetUrl(value: string) {
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && KLIPY_ASSET_HOSTS.has(url.hostname);
-  } catch {
-    return false;
-  }
 }
 
 export type KlipyGif = {

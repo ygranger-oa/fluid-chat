@@ -6,19 +6,14 @@ import type { GifResult } from "@/shared/types";
 import { api } from "../../api";
 import { useI18n } from "../../i18n";
 
-/**
- * GIF search, mirroring EmojiPicker's shape (search box, scrollable grid,
- * pick-and-close). Unlike emoji, a pick is async: `onPick` awaits the caller
- * copying the GIF into our own storage before the popover closes, so a failed
- * import can surface an error instead of silently vanishing.
- */
+/** GIF search, mirroring EmojiPicker's shape: search box, scrollable grid, pick-and-close. */
 export function GifPicker({
   workspaceId,
   onPick,
   onClose
 }: {
   workspaceId: string;
-  onPick: (gif: GifResult) => Promise<void> | void;
+  onPick: (gif: GifResult) => void;
   onClose?: () => void;
 }) {
   const { t } = useI18n();
@@ -26,7 +21,6 @@ export function GifPicker({
   const [gifs, setGifs] = useState<GifResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [sendingId, setSendingId] = useState<string | null>(null);
   const requestId = useRef(0);
 
   useEffect(() => {
@@ -56,15 +50,9 @@ export function GifPicker({
     return () => clearTimeout(timer);
   }, [query, workspaceId]);
 
-  const pick = async (gif: GifResult) => {
-    if (sendingId) return;
-    setSendingId(gif.id);
-    try {
-      await onPick(gif);
-      onClose?.();
-    } finally {
-      setSendingId(null);
-    }
+  const pick = (gif: GifResult) => {
+    onPick(gif);
+    onClose?.();
   };
 
   return (
@@ -95,10 +83,8 @@ export function GifPicker({
                 <button
                   key={gif.id}
                   type="button"
-                  className={sendingId === gif.id ? "is-sending" : ""}
                   title={gif.title ?? undefined}
-                  disabled={sendingId !== null}
-                  onClick={() => void pick(gif)}
+                  onClick={() => pick(gif)}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={gif.previewUrl} alt={gif.title ?? ""} loading="lazy" />

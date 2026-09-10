@@ -270,19 +270,15 @@ export function Composer({
     }
   };
 
-  const pickGif = async (gif: GifResult) => {
-    const workspaceId = state.workspaceId;
-    if (!workspaceId) return;
-    setUploading(true);
-    try {
-      const { file: uploaded } = await api.gifs.import(workspaceId, gif, conversationId);
-      track("gif_sent", { byte_size: uploaded.size });
-      setAttachments((current) => [...current, uploaded]);
-    } catch (error) {
-      actions.fail(error);
-    } finally {
-      setUploading(false);
-    }
+  // A GIF is a link, not an attachment — `![title](url)`, the same format
+  // Mattermost's own Giphy integration posted (see src/shared/markdown.ts).
+  // Nothing is fetched or stored here; it just becomes composer text, like
+  // an emoji pick.
+  const pickGif = (gif: GifResult) => {
+    track("gif_inserted", {});
+    const markdown = `![${gif.title ?? "GIF"}](${gif.url})`;
+    const next = `${text}${text.endsWith(" ") || !text ? "" : " "}${markdown} `;
+    replaceText(next, next.length);
   };
 
   const send = async () => {

@@ -47,7 +47,7 @@ type Events = {
   invite_link_created: Record<string, never>;
   search_performed: { sort: "recent" | "relevant"; query_length: number; result_count: number };
   file_uploaded: { byte_size: number; mime_type: string };
-  gif_sent: { byte_size: number };
+  gif_inserted: Record<string, never>;
   message_scheduled: Record<string, never>;
 };
 

@@ -32,6 +32,13 @@ describe("message parsing", () => {
     expect(nodes[6]).toEqual({ type: "emoji", name: "rocket" });
   });
 
+  it("parses an inline image link", () => {
+    const nodes = parseInline("![Happy Celebration GIF](https://media3.giphy.com/media/abc/200.gif)");
+    expect(nodes).toEqual([
+      { type: "image", alt: "Happy Celebration GIF", href: "https://media3.giphy.com/media/abc/200.gif" }
+    ]);
+  });
+
   it("does not treat code spans as formatting", () => {
     const nodes = parseInline("`a *b* c`");
     expect(nodes).toEqual([{ type: "code", value: "a *b* c" }]);
@@ -60,5 +67,15 @@ describe("message parsing", () => {
   it("extracts urls from bare and wrapped links", () => {
     const urls = extractUrls("see https://a.example/path and <https://b.example|b>");
     expect(urls).toEqual(["https://a.example/path", "https://b.example"]);
+  });
+
+  it("excludes inline image urls from extraction, so unfurl doesn't double up on a GIF", () => {
+    const urls = extractUrls("![a GIF](https://media.giphy.com/media/abc/200.gif)");
+    expect(urls).toEqual([]);
+  });
+
+  it("renders an inline image as its alt text in plain text", () => {
+    const text = "check this out ![so funny](https://media.giphy.com/media/abc/200.gif)";
+    expect(toPlainText(text)).toBe("check this out so funny");
   });
 });

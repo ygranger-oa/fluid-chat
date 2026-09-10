@@ -185,7 +185,6 @@ export const ROUTE_ACCESS: Record<string, RouteAccess> = {
   /* GIFs (Klipy) */
   "GET /workspaces/:workspaceId/gifs/search": "files:read",
   "GET /workspaces/:workspaceId/gifs/trending": "files:read",
-  "POST /workspaces/:workspaceId/gifs/import": "files:write",
 
   /* Activity and search */
   "GET /workspaces/:workspaceId/search": "messages:read",

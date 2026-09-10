@@ -10,9 +10,14 @@
  *   <!here> <!channel> <!everyone>   broadcast mention
  *   <!group:group-uuid|handle>       user group mention
  *   <https://example.com|label>      explicit link
+ *   ![alt text](https://example.com/image.gif)   inline image
  *
  * Formatting supports both Slack (*bold*, _italic_, ~strike~) and common
  * markdown (**bold**, __italic__), plus `code`, ```blocks```, > quotes and lists.
+ *
+ * `![alt](url)` is how a picked GIF is stored (see the composer's GIF picker) —
+ * a link, not an attachment, exactly like the Mattermost/Giphy posts this format
+ * was kept compatible with. Nothing is fetched or stored for it server-side.
  */
 
 export type InlineNode =
@@ -22,6 +27,7 @@ export type InlineNode =
   | { type: "strike"; children: InlineNode[] }
   | { type: "code"; value: string }
   | { type: "link"; href: string; label: string }
+  | { type: "image"; href: string; alt: string }
   | { type: "mention"; userId: string }
   | { type: "channel"; channelId: string; name: string }
   | { type: "broadcast"; name: "here" | "channel" | "everyone" }
@@ -126,6 +132,10 @@ const matchers: Matcher[] = [
     pattern: /^<(https?:\/\/[^>|\s]+)(?:\|([^>]*))?>/i,
     build: (match) => ({ type: "link", href: match[1], label: match[2] || match[1] })
   },
+  {
+    pattern: /^!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/i,
+    build: (match) => ({ type: "image", alt: match[1], href: match[2] })
+  },
   { pattern: /^:([a-z0-9_+-]{1,64}):/i, build: (match) => ({ type: "emoji", name: match[1].toLowerCase() }) },
   { pattern: /^\*\*([^\n]+?)\*\*/, build: (match) => ({ type: "bold", children: parseInline(match[1]) }) },
   { pattern: /^\*([^*\n]+?)\*/, build: (match) => ({ type: "bold", children: parseInline(match[1]) }) },
@@ -181,6 +191,7 @@ export function toPlainText(text: string, resolve?: { user?: (id: string) => str
     .replace(/<!(here|channel|everyone)>/gi, (_, name: string) => `@${name}`)
     .replace(/<!group:[0-9a-f-]{36}\|([^>]*)>/gi, (_, handle: string) => `@${handle}`)
     .replace(/<(https?:\/\/[^>|\s]+)(?:\|([^>]*))?>/gi, (_, href: string, label: string) => label || href)
+    .replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/gi, (_, alt: string, href: string) => alt || href)
     .replace(/```([\s\S]*?)```/g, (_, code: string) => code.trim())
     .replace(/[*_~`]/g, "")
     .trim();
@@ -188,7 +199,11 @@ export function toPlainText(text: string, resolve?: { user?: (id: string) => str
 
 export function extractUrls(text: string): string[] {
   const urls = new Set<string>();
-  for (const match of text.matchAll(URL_PATTERN)) urls.add(match[0]);
+  // An inline image already renders itself; skip its URL here so link
+  // unfurling (when enabled) doesn't add a second, redundant preview card
+  // underneath a GIF for the same address.
+  const withoutImages = text.replace(/!\[[^\]]*\]\((https?:\/\/[^\s)]+)\)/gi, "");
+  for (const match of withoutImages.matchAll(URL_PATTERN)) urls.add(match[0]);
   for (const match of text.matchAll(/<(https?:\/\/[^>|\s]+)(?:\|[^>]*)?>/gi)) urls.add(match[1]);
   return Array.from(urls);
 }

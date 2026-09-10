@@ -179,13 +179,15 @@ Full guide: **[API keys](api-keys.md)**. Admin or owner only.
 
 Backed by [Klipy](https://klipy.com); disabled and hidden from the composer unless `KLIPY_API_KEY`
 is set (`GET /workspaces/:id/bootstrap` reports this as `gifsEnabled`). The app key never leaves
-the server.
+the server. A picked GIF is never fetched or stored: the client sends it as a normal message whose
+body is `![title](url)` — a link, not an attachment, matching how Mattermost's own Giphy
+integration posted GIFs (and why those old imported messages now render inline too). It does not
+count against the workspace's file storage quota.
 
 | Method | Path | Scope | Notes |
 | --- | --- | --- | --- |
 | GET | `/workspaces/:id/gifs/search` | `files:read` | `?q=` required, `?page=` (24 per page) |
 | GET | `/workspaces/:id/gifs/trending` | `files:read` | `?page=` |
-| POST | `/workspaces/:id/gifs/import` | `files:write` | `{ url, width, height, conversationId? }` from a search/trending result; copies it into a normal file (`files:write` quota applies) so it can be attached like any upload |
 
 ## Activity and search
 
@@ -222,7 +224,10 @@ Message bodies are plain text with stable entity tokens:
 <!here> <!channel> <!everyone> broadcast
 <!group:group-uuid|handle>    user group
 <https://example.com|label>   labelled link
+![alt text](https://example.com/image.gif)   inline image
 *bold* _italic_ ~strike~ `code` ```block``` > quote - list
 ```
 
 `:shortcode:` renders a unicode emoji, or a workspace custom emoji image when one matches.
+`![alt](url)` renders inline — this is the format the composer's GIF picker sends, and how
+Mattermost's own Giphy integration posted GIFs, so imports using that format render the same way.

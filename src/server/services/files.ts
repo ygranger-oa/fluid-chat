@@ -43,8 +43,6 @@ export async function uploadFile(options: {
   uploader: User;
   conversationId?: string | null;
   file: File;
-  /** Skip header sniffing when the caller already knows the size, e.g. a GIF import. */
-  dimensions?: { width: number; height: number } | null;
 }) {
   const { file } = options;
   if (!file || typeof file.arrayBuffer !== "function") {
@@ -64,7 +62,7 @@ export async function uploadFile(options: {
   const mimeType = file.type || "application/octet-stream";
   const key = buildStorageKey(options.workspaceId, name);
   const expiresAt = fileExpiresAt();
-  const dimensions = options.dimensions ?? imageDimensions(buffer, file.type);
+  const dimensions = imageDimensions(buffer, file.type);
 
   // Write the object before opening the transaction. An S3 round-trip inside
   // db.transaction would hold a pool connection — and the workspace quota lock

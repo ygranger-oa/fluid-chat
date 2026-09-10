@@ -160,6 +160,13 @@ function Inline({ node }: { node: InlineNode }) {
           {node.label}
         </a>
       );
+    case "image":
+      return (
+        <a href={node.href} target="_blank" rel="noopener noreferrer nofollow" className="inline-image-link">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="inline-image" src={node.href} alt={node.alt} loading="lazy" />
+        </a>
+      );
     case "mention": {
       const user = directory.get(node.userId);
       const isMe = state.session?.id === node.userId;
