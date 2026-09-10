@@ -89,6 +89,7 @@ export type ConversationSummary = {
     hidden: boolean;
     notificationLevel: NotificationLevelName;
     sectionId: string | null;
+    position: number;
     lastReadAt: string | null;
     lastReadMessageId: string | null;
   } | null;
@@ -133,6 +134,16 @@ export type LinkPreviewSummary = {
   description: string | null;
   imageUrl: string | null;
   siteName: string | null;
+};
+
+/** A Klipy search/trending result, before it is imported into a `FileSummary`. */
+export type GifResult = {
+  id: string;
+  title: string | null;
+  previewUrl: string;
+  url: string;
+  width: number;
+  height: number;
 };
 
 export type ThreadSummary = {
@@ -259,6 +270,8 @@ export type WorkspaceBootstrap = {
   groups: UserGroupDto[];
   drafts: DraftDto[];
   unreadNotifications: number;
+  /** Whether KLIPY_API_KEY is set instance-wide — gates the composer's GIF button. */
+  gifsEnabled: boolean;
 };
 
 export type RealtimeEvent =

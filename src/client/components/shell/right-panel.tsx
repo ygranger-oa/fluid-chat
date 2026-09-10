@@ -365,7 +365,7 @@ function DetailsPanel({ conversationId, onClose }: { conversationId: string; onC
 
         {tab === "settings" && channel ? (
           <div className="panel-section">
-            {isAdmin || channel.createdByUserId === state.session?.id ? (
+            {isAdmin ? (
               <form
                 className="field"
                 onSubmit={async (event) => {

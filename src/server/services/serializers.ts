@@ -157,7 +157,8 @@ export function toConversationSummary(input: {
           muted: !!membership.mutedAt,
           hidden: !!membership.hiddenAt,
           notificationLevel: membership.notificationLevel,
-          sectionId: membership.sectionId,
+          sectionId: conversation.sidebarSectionId,
+          position: conversation.sidebarPosition,
           lastReadAt: iso(membership.lastReadAt),
           lastReadMessageId: membership.lastReadMessageId
         }

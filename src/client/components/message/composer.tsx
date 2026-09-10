@@ -23,11 +23,12 @@ import {
   Quote,
   Send,
   Smile,
+  Sticker,
   Strikethrough,
   Timer,
   X
 } from "lucide-react";
-import type { FileSummary } from "@/shared/types";
+import type { FileSummary, GifResult } from "@/shared/types";
 import { toMentionDisplay, toMentionWire, userMentionLabel } from "@/shared/mention-text";
 import { api } from "../../api";
 import { track } from "../../analytics";
@@ -37,6 +38,7 @@ import { useI18n } from "../../i18n";
 import { useApp, useCustomEmoji, useDirectory, useMentionDirectory } from "../../store";
 import { Avatar, IconButton, Popover } from "../ui/primitives";
 import { EmojiPicker } from "../ui/emoji-picker";
+import { GifPicker } from "../ui/gif-picker";
 
 type Suggestion = { id: string; label: string; hint?: string; insert: string; avatarUserId?: string; preview?: string };
 
@@ -261,6 +263,21 @@ export function Composer({
         track("file_uploaded", { byte_size: file.size, mime_type: file.type || "unknown" });
         setAttachments((current) => [...current, uploaded]);
       }
+    } catch (error) {
+      actions.fail(error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const pickGif = async (gif: GifResult) => {
+    const workspaceId = state.workspaceId;
+    if (!workspaceId) return;
+    setUploading(true);
+    try {
+      const { file: uploaded } = await api.gifs.import(workspaceId, gif, conversationId);
+      track("gif_sent", { byte_size: uploaded.size });
+      setAttachments((current) => [...current, uploaded]);
     } catch (error) {
       actions.fail(error);
     } finally {
@@ -505,6 +522,18 @@ export function Composer({
                 />
               )}
             </Popover>
+            {state.bootstrap?.gifsEnabled && state.workspaceId ? (
+              <Popover
+                width={340}
+                trigger={({ toggle, ref }) => (
+                  <button type="button" className="icon-button" ref={ref} onClick={toggle} aria-label={t("composer.gif")}>
+                    <Sticker size={17} />
+                  </button>
+                )}
+              >
+                {(close) => <GifPicker workspaceId={state.workspaceId!} onPick={pickGif} onClose={close} />}
+              </Popover>
+            ) : null}
             {parentMessageId ? (
               <label className="broadcast-toggle">
                 <input type="checkbox" checked={broadcast} onChange={(event) => setBroadcast(event.target.checked)} />

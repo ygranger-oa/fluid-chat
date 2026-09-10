@@ -3,20 +3,23 @@ import { z } from "zod";
 import { db } from "@/db/client";
 import {
   conversationMembers,
+  conversations,
   drafts,
   files,
   messagePins,
   messages,
+  sidebarSections,
   scheduledMessages
 } from "@/db/schema";
 import { HttpError, json } from "@/lib/http";
 import {
   ensureConversationMembership,
   requireConversationMember,
+  requireWorkspaceAdmin,
   requireWorkspaceMember,
   resolveConversationAccess
 } from "@/lib/permissions";
-import { toConversation, toUsers } from "@/lib/realtime";
+import { toConversation, toUsers, toWorkspace } from "@/lib/realtime";
 import { defineRoutes } from "../router";
 import {
   conversationLabel,
@@ -188,23 +191,49 @@ export const conversationRoutes = defineRoutes({
   "PATCH /conversations/:conversationId/membership": async (ctx) => {
     const user = await ctx.user();
     const conversationId = ctx.param("conversationId");
-    await requireConversationMember(conversationId, user.id);
+    const access = await requireConversationMember(conversationId, user.id);
     const input = await ctx.input(
       z.object({
         starred: z.boolean().optional(),
         muted: z.boolean().optional(),
         notificationLevel: z.enum(["all", "mentions", "none"]).optional(),
         sectionId: z.string().uuid().nullable().optional(),
+        position: z.number().int().min(0).max(2_147_483_647).optional(),
         hidden: z.boolean().optional()
       })
     );
+    const sidebarStructureChange = input.sectionId !== undefined || input.position !== undefined;
+    if (sidebarStructureChange) {
+      await requireWorkspaceAdmin(access.conversation.workspaceId, user.id);
+      if (access.conversation.type !== "channel") {
+        throw new HttpError(400, "Only channels can be organized in workspace categories", "invalid_sidebar_target");
+      }
+    }
+    if (input.sectionId) {
+      const [section] = await db
+        .select({ id: sidebarSections.id, workspaceId: sidebarSections.workspaceId })
+        .from(sidebarSections)
+        .where(and(eq(sidebarSections.id, input.sectionId), eq(sidebarSections.workspaceId, access.conversation.workspaceId)))
+        .limit(1);
+      if (!section) throw new HttpError(404, "Section not found", "not_found");
+    }
+    if (sidebarStructureChange) {
+      await db
+        .update(conversations)
+        .set({
+          sidebarSectionId: input.sectionId,
+          sidebarPosition: input.position,
+          updatedAt: new Date()
+        })
+        .where(eq(conversations.id, conversationId));
+      await toWorkspace(access.conversation.workspaceId, { type: "conversation.updated", conversationId });
+    }
     const [membership] = await db
       .update(conversationMembers)
       .set({
         starred: input.starred,
         mutedAt: input.muted === undefined ? undefined : input.muted ? new Date() : null,
         notificationLevel: input.notificationLevel,
-        sectionId: input.sectionId,
         hiddenAt: input.hidden === undefined ? undefined : input.hidden ? new Date() : null
       })
       .where(and(eq(conversationMembers.conversationId, conversationId), eq(conversationMembers.userId, user.id)))

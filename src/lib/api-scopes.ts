@@ -182,6 +182,11 @@ export const ROUTE_ACCESS: Record<string, RouteAccess> = {
   "GET /files/:fileId/download": "files:read",
   "DELETE /files/:fileId": "files:write",
 
+  /* GIFs (Klipy) */
+  "GET /workspaces/:workspaceId/gifs/search": "files:read",
+  "GET /workspaces/:workspaceId/gifs/trending": "files:read",
+  "POST /workspaces/:workspaceId/gifs/import": "files:write",
+
   /* Activity and search */
   "GET /workspaces/:workspaceId/search": "messages:read",
   "GET /workspaces/:workspaceId/notifications": "activity:read",

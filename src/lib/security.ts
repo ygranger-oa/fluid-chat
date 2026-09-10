@@ -50,10 +50,7 @@ export function slugify(input: string) {
 export function normalizeChannelName(input: string) {
   return input
     .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .replace(/[\u0000-\u001F\u007F<>|]/g, "")
+    .replace(/\s+/g, " ")
     .slice(0, 80);
 }

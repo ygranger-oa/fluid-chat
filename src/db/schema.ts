@@ -245,6 +245,19 @@ export const channelBookmarks = pgTable("channel_bookmarks", {
   index("channel_bookmarks_channel_idx").on(table.channelId)
 ]);
 
+export const sidebarSections = pgTable("sidebar_sections", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  name: text("name").notNull(),
+  emoji: text("emoji"),
+  position: integer("position").notNull().default(0),
+  collapsed: boolean("collapsed").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+}, (table) => [
+  index("sidebar_sections_workspace_idx").on(table.workspaceId)
+]);
+
 export const conversations = pgTable("conversations", {
   id: uuid("id").defaultRandom().primaryKey(),
   workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
@@ -253,24 +266,13 @@ export const conversations = pgTable("conversations", {
   name: text("name"),
   memberKey: text("member_key"),
   createdByUserId: uuid("created_by_user_id").references(() => users.id),
+  sidebarSectionId: uuid("sidebar_section_id").references(() => sidebarSections.id, { onDelete: "set null" }),
+  sidebarPosition: integer("sidebar_position").notNull().default(0),
   lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
   ...timestamps
 }, (table) => [
   index("conversations_workspace_idx").on(table.workspaceId),
   unique().on(table.workspaceId, table.memberKey)
-]);
-
-export const sidebarSections = pgTable("sidebar_sections", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  emoji: text("emoji"),
-  position: integer("position").notNull().default(0),
-  collapsed: boolean("collapsed").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
-}, (table) => [
-  index("sidebar_sections_user_idx").on(table.workspaceId, table.userId)
 ]);
 
 export const conversationMembers = pgTable("conversation_members", {
@@ -285,6 +287,7 @@ export const conversationMembers = pgTable("conversation_members", {
   notificationLevel: notificationLevel("notification_level").notNull().default("all"),
   starred: boolean("starred").notNull().default(false),
   sectionId: uuid("section_id").references(() => sidebarSections.id, { onDelete: "set null" }),
+  position: integer("position").notNull().default(0),
   hiddenAt: timestamp("hidden_at", { withTimezone: true }),
   joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow().notNull(),
   leftAt: timestamp("left_at", { withTimezone: true })

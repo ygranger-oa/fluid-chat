@@ -342,15 +342,19 @@ export const workspaceRoutes = defineRoutes({
   "POST /workspaces/:workspaceId/sections": async (ctx) => {
     const user = await ctx.user();
     const workspaceId = ctx.param("workspaceId");
-    await requireWorkspaceMember(workspaceId, user.id);
+    await requireWorkspaceAdmin(workspaceId, user.id);
     const input = await ctx.input(
-      z.object({ name: z.string().min(1).max(60), emoji: z.string().max(64).optional(), position: z.number().int().optional() })
+      z.object({
+        name: z.string().min(1).max(60),
+        emoji: z.string().max(64).optional(),
+        position: z.number().int().min(0).max(2_147_483_647).optional()
+      })
     );
     const [section] = await db
       .insert(sidebarSections)
       .values({
         workspaceId,
-        userId: user.id,
+        userId: null,
         name: input.name,
         emoji: input.emoji ?? null,
         position: input.position ?? 0
@@ -366,14 +370,17 @@ export const workspaceRoutes = defineRoutes({
       z.object({
         name: z.string().min(1).max(60).optional(),
         emoji: z.string().max(64).nullable().optional(),
-        position: z.number().int().optional(),
+        position: z.number().int().min(0).max(2_147_483_647).optional(),
         collapsed: z.boolean().optional()
       })
     );
+    const [existing] = await db.select().from(sidebarSections).where(eq(sidebarSections.id, sectionId)).limit(1);
+    if (!existing) throw new HttpError(404, "Section not found", "not_found");
+    await requireWorkspaceAdmin(existing.workspaceId, user.id);
     const [section] = await db
       .update(sidebarSections)
       .set(input)
-      .where(and(eq(sidebarSections.id, sectionId), eq(sidebarSections.userId, user.id)))
+      .where(eq(sidebarSections.id, sectionId))
       .returning();
     if (!section) throw new HttpError(404, "Section not found", "not_found");
     return { section };
@@ -382,7 +389,10 @@ export const workspaceRoutes = defineRoutes({
   "DELETE /sections/:sectionId": async (ctx) => {
     const user = await ctx.user();
     const sectionId = ctx.param("sectionId");
-    await db.delete(sidebarSections).where(and(eq(sidebarSections.id, sectionId), eq(sidebarSections.userId, user.id)));
+    const [section] = await db.select().from(sidebarSections).where(eq(sidebarSections.id, sectionId)).limit(1);
+    if (!section) throw new HttpError(404, "Section not found", "not_found");
+    await requireWorkspaceAdmin(section.workspaceId, user.id);
+    await db.delete(sidebarSections).where(eq(sidebarSections.id, sectionId));
     return { ok: true };
   },
 

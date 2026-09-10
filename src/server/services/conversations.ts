@@ -51,7 +51,7 @@ export async function createChannel(options: {
     const [existing] = await tx
       .select({ id: channels.id })
       .from(channels)
-      .where(and(eq(channels.workspaceId, options.workspaceId), eq(channels.name, name)))
+      .where(and(eq(channels.workspaceId, options.workspaceId), sql`lower(${channels.name}) = lower(${name})`))
       .limit(1);
     if (existing) throw new HttpError(409, "Channel name already exists", "duplicate_channel_name");
 

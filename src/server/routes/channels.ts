@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { channelBookmarks, channels, conversationMembers, conversations } from "@/db/schema";
@@ -111,7 +111,7 @@ export const channelRoutes = defineRoutes({
       })
     );
 
-    const privileged = isModerator(member) || channel.createdByUserId === user.id;
+    const privileged = isModerator(member);
     const restrictedChange =
       input.name !== undefined ||
       input.postingPolicy !== undefined ||
@@ -130,7 +130,7 @@ export const channelRoutes = defineRoutes({
       const [existing] = await db
         .select({ id: channels.id })
         .from(channels)
-        .where(and(eq(channels.workspaceId, channel.workspaceId), eq(channels.name, name), ne(channels.id, channel.id)))
+        .where(and(eq(channels.workspaceId, channel.workspaceId), sql`lower(${channels.name}) = lower(${name})`, ne(channels.id, channel.id)))
         .limit(1);
       if (existing) throw new HttpError(409, "Channel name already exists", "duplicate_channel_name");
       update.name = name;

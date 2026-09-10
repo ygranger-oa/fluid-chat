@@ -18,7 +18,7 @@ import {
 } from "@/db/schema";
 import type { Conversation, User, Workspace } from "@/db/schema";
 import { emojiChar } from "@/client/emoji";
-import { normalizeChannelName, normalizeEmail } from "@/lib/security";
+import { normalizeEmail } from "@/lib/security";
 import { fileExpiresAt } from "./file-policy";
 import { buildStorageKey, putObject } from "./storage";
 
@@ -133,7 +133,14 @@ const DEFAULT_SUMMARY: MattermostImportSummary = {
 };
 
 export function mattermostChannelName(name: string | undefined) {
-  const normalized = normalizeChannelName(name ?? "");
+  const normalized = (name ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
   return normalized === "town-square" ? "general" : normalized;
 }
 

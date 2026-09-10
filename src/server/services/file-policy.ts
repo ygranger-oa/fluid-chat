@@ -3,7 +3,7 @@ import { HttpError } from "@/lib/http";
 const MEBIBYTE = 1024 * 1024;
 
 export const MAX_UPLOAD_BYTES = 10 * MEBIBYTE;
-export const MAX_WORKSPACE_FILE_BYTES = 100 * MEBIBYTE;
+export const MAX_WORKSPACE_FILE_BYTES = 10000 * MEBIBYTE;
 export const FILE_RETENTION_DAYS = 15;
 export const FILE_RETENTION_MS = FILE_RETENTION_DAYS * 86_400_000;
 export const EXPORT_RETENTION_DAYS = 7;

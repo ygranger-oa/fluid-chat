@@ -137,20 +137,34 @@ export function Popover({
     const trigger = triggerRef.current;
     const panel = panelRef.current;
     if (!open || !trigger || !panel) return;
-    const rect = trigger.getBoundingClientRect();
-    const gap = 6;
-    const margin = 8;
-    // Room for the panel between the trigger and each edge of the viewport.
-    const below = window.innerHeight - rect.bottom - gap - margin;
-    const above = rect.top - gap - margin;
-    const flip = panel.scrollHeight > below && above > below;
-    const maxHeight = flip ? above : below;
-    const left = align === "end" ? rect.right - panelWidth : rect.left;
-    setPosition({
-      top: flip ? rect.top - gap - Math.min(panel.scrollHeight, maxHeight) : rect.bottom + gap,
-      left: Math.max(margin, Math.min(left, window.innerWidth - panelWidth - margin)),
-      maxHeight
-    });
+
+    const reposition = () => {
+      const rect = trigger.getBoundingClientRect();
+      const gap = 6;
+      const margin = 8;
+      // Room for the panel between the trigger and each edge of the viewport.
+      const below = window.innerHeight - rect.bottom - gap - margin;
+      const above = rect.top - gap - margin;
+      const flip = panel.scrollHeight > below && above > below;
+      const maxHeight = flip ? above : below;
+      const left = align === "end" ? rect.right - panelWidth : rect.left;
+      setPosition({
+        top: flip ? rect.top - gap - Math.min(panel.scrollHeight, maxHeight) : rect.bottom + gap,
+        left: Math.max(margin, Math.min(left, window.innerWidth - panelWidth - margin)),
+        maxHeight
+      });
+    };
+
+    reposition();
+    // A picker whose content loads asynchronously (search results, GIFs)
+    // grows well after this first layout — without watching for that, the
+    // panel keeps the position/height computed against its near-empty
+    // loading state and ends up overflowing the viewport once content
+    // arrives, instead of flipping or clamping to the space that's actually
+    // left.
+    const observer = new ResizeObserver(reposition);
+    observer.observe(panel);
+    return () => observer.disconnect();
   }, [open, align, panelWidth]);
 
   useEffect(() => {

@@ -20,6 +20,7 @@ import { slugify } from "@/lib/security";
 import type { WorkspaceBootstrap } from "@/shared/types";
 import { toIso, toPublicUser, toWorkspaceSummary } from "./serializers";
 import { listChannelDirectory, listSidebarConversations } from "./conversations";
+import { klipyConfigured } from "./klipy";
 import { unreadNotificationCount } from "./notifications";
 
 const DEFAULT_CHANNELS = [
@@ -131,7 +132,7 @@ export async function bootstrapWorkspace(workspace: Workspace, user: User): Prom
       db
         .select()
         .from(sidebarSections)
-        .where(and(eq(sidebarSections.workspaceId, workspace.id), eq(sidebarSections.userId, user.id)))
+        .where(eq(sidebarSections.workspaceId, workspace.id))
         .orderBy(sidebarSections.position),
       db.select().from(customEmoji).where(eq(customEmoji.workspaceId, workspace.id)),
       db
@@ -207,6 +208,7 @@ export async function bootstrapWorkspace(workspace: Workspace, user: User): Prom
       bodyText: draft.bodyText,
       updatedAt: new Date(draft.updatedAt).toISOString()
     })),
-    unreadNotifications: unread
+    unreadNotifications: unread,
+    gifsEnabled: klipyConfigured()
   };
 }

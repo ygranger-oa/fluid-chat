@@ -7,9 +7,10 @@ describe("security helpers", () => {
     expect(slugify(" My Great Workspace! ")).toBe("my-great-workspace");
   });
 
-  it("normalizes channel names to MVP rules", () => {
-    expect(normalizeChannelName("Launch Plan 2026!!")).toBe("launch-plan-2026");
-    expect(normalizeChannelName("----General----")).toBe("general");
+  it("normalizes channel display names without forcing slugs", () => {
+    expect(normalizeChannelName(" Launch Plan 2026 🚀 ")).toBe("Launch Plan 2026 🚀");
+    expect(normalizeChannelName("Qualité   labo")).toBe("Qualité labo");
+    expect(normalizeChannelName("Ops <prod|secret>")).toBe("Ops prodsecret");
   });
 
   it("hashes tokens deterministically without exposing the token", () => {

@@ -58,6 +58,8 @@ SMTP_FROM                 Sender address.
 ENABLE_LINK_UNFURL        Set to "true" to let the worker fetch link previews. Private and
                           loopback hosts are always refused.
 STRIPE_SECRET_KEY         Reserved for hosted billing integration.
+KLIPY_API_KEY             Enables the GIF picker in the composer (klipy.com). Unset hides the
+                          button in the UI; the GIF endpoints return 503 while unset.
 ```
 
 ## Authentik SSO

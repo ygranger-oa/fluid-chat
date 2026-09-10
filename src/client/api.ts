@@ -5,6 +5,7 @@ import type {
   CustomEmojiDto,
   DraftDto,
   FileSummary,
+  GifResult,
   MessageDto,
   NotificationDto,
   PublicUser,
@@ -305,6 +306,7 @@ export const api = {
         muted?: boolean;
         notificationLevel?: "all" | "mentions" | "none";
         sectionId?: string | null;
+        position?: number;
         hidden?: boolean;
       }
     ) => patch<{ membership: unknown }>(`/conversations/${conversationId}/membership`, input),
@@ -349,6 +351,20 @@ export const api = {
       return request<{ file: FileSummary }>("/files", { method: "POST", body: form });
     },
     remove: (fileId: string) => del<{ ok: true }>(`/files/${fileId}`)
+  },
+
+  gifs: {
+    search: (workspaceId: string, query: string, page = 1) =>
+      get<{ gifs: GifResult[] }>(`/workspaces/${workspaceId}/gifs/search?q=${encodeURIComponent(query)}&page=${page}`),
+    trending: (workspaceId: string, page = 1) =>
+      get<{ gifs: GifResult[] }>(`/workspaces/${workspaceId}/gifs/trending?page=${page}`),
+    import: (workspaceId: string, gif: Pick<GifResult, "url" | "width" | "height">, conversationId?: string | null) =>
+      post<{ file: FileSummary }>(`/workspaces/${workspaceId}/gifs/import`, {
+        url: gif.url,
+        width: gif.width,
+        height: gif.height,
+        conversationId
+      })
   },
 
   activity: {

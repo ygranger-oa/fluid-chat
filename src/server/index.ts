@@ -20,6 +20,7 @@ import { channelRoutes } from "./routes/channels";
 import { conversationRoutes } from "./routes/conversations";
 import { messageRoutes } from "./routes/messages";
 import { fileRoutes } from "./routes/files";
+import { gifRoutes } from "./routes/gifs";
 import { activityRoutes } from "./routes/activity";
 import { webhookRoutes } from "./routes/webhooks";
 import { apiKeyRoutes } from "./routes/api-keys";
@@ -38,6 +39,7 @@ const routes = compileRoutes([
   conversationRoutes,
   messageRoutes,
   fileRoutes,
+  gifRoutes,
   activityRoutes,
   webhookRoutes,
   apiKeyRoutes,

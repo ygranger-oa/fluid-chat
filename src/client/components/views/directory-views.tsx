@@ -118,6 +118,12 @@ export function PeopleView() {
   const { t } = useI18n();
   const [query, setQuery] = useState("");
   const members = (state.bootstrap?.members ?? []).filter((member) => member.status === "active");
+  const roleLabel = (role: (typeof members)[number]["role"]) => {
+    if (role === "owner") return t("views.workspaceOwner");
+    if (role === "admin") return t("views.workspaceAdmin");
+    if (role === "guest") return t("views.workspaceGuest");
+    return t("views.workspaceMember");
+  };
 
   const visible = members.filter((member) => {
     const term = query.trim().toLowerCase();
@@ -146,20 +152,30 @@ export function PeopleView() {
         </div>
       </div>
 
-      <div className="people-grid">
-        {visible.map((member) => (
-          <button
-            key={member.user.id}
-            type="button"
-            className="person-card"
-            onClick={() => actions.setRightPanel({ kind: "profile", userId: member.user.id })}
-          >
-            <Avatar user={member.user} size={56} />
-            <strong>{member.user.displayName}</strong>
-            <span>{member.user.title ?? (member.role === "owner" ? t("views.workspaceOwner") : member.role)}</span>
-            {member.user.statusText ? <small>{member.user.statusText}</small> : null}
-          </button>
-        ))}
+      <div className="view-scroll">
+        {visible.length === 0 ? (
+          <EmptyState title={t("views.noPeopleFound")} body={t("views.noPeopleFoundBody")} />
+        ) : (
+          <div className="people-grid">
+            {visible.map((member) => (
+              <button
+                key={member.user.id}
+                type="button"
+                className="person-card"
+                onClick={() => actions.setRightPanel({ kind: "profile", userId: member.user.id })}
+              >
+                <Avatar user={member.user} size={48} />
+                <span className="person-card-main">
+                  <strong>{member.user.displayName}</strong>
+                  <span className="person-card-handle">@{member.user.handle ?? member.user.email}</span>
+                  <span className="person-card-meta">{member.user.title ?? roleLabel(member.role)}</span>
+                  {member.user.statusText ? <small>{member.user.statusText}</small> : null}
+                </span>
+                <span className={`person-role person-role-${member.role}`}>{roleLabel(member.role)}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

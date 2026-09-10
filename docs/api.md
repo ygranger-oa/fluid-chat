@@ -75,7 +75,7 @@ fallback when no supported language matches.
 | GET | `/workspaces/:id/audit-events` | `admin:read` | Admin audit log |
 | GET | `/workspaces/:id/exports` | `admin:read` | Export history |
 | POST | `/workspaces/:id/exports` | `admin:write` | Queue an export job (owner) |
-| POST | `/workspaces/:id/sections`, PATCH/DELETE `/sections/:id` | `workspace:write` | Sidebar sections |
+| POST | `/workspaces/:id/sections`, PATCH/DELETE `/sections/:id` | `workspace:write` | Global workspace sidebar sections |
 | GET/POST | `/workspaces/:id/emoji`, DELETE `/emoji/:id` | `workspace:read` / `workspace:write` | Custom emoji |
 | GET/POST | `/workspaces/:id/user-groups`, PATCH/DELETE `/user-groups/:id` | `workspace:read` / `workspace:write` | Mentionable groups |
 
@@ -110,7 +110,7 @@ fallback when no supported language matches.
 | GET | `/conversations/:id/messages` | `messages:read` | `?before=` / `?after=` ISO cursors, `?limit=` |
 | POST | `/conversations/:id/messages` | `messages:write` | Sends, or runs a slash command |
 | POST | `/conversations/:id/read`, `/unread` | `conversations:write` | Read state, mark unread from a message |
-| PATCH | `/conversations/:id/membership` | `conversations:write` | Star, mute, notification level, section, hide |
+| PATCH | `/conversations/:id/membership` | `conversations:write` | Star, mute, notification level, section, sidebar position, hide |
 | GET | `/conversations/:id/pins` | `messages:read` | Pinned messages |
 | GET | `/conversations/:id/files` | `files:read` | Shared files |
 | PUT | `/conversations/:id/draft` | `messages:write` | Upsert (empty body deletes) |
@@ -174,6 +174,18 @@ Full guide: **[API keys](api-keys.md)**. Admin or owner only.
 | POST | `/files` | `files:write` | `multipart/form-data`: `workspaceId`, optional `conversationId`, `file` |
 | GET | `/files/:id/download` | `files:read` | Access-checked stream; images and PDFs inline, rest attachment |
 | DELETE | `/files/:id` | `files:write` | Uploader or admin |
+
+## GIFs
+
+Backed by [Klipy](https://klipy.com); disabled and hidden from the composer unless `KLIPY_API_KEY`
+is set (`GET /workspaces/:id/bootstrap` reports this as `gifsEnabled`). The app key never leaves
+the server.
+
+| Method | Path | Scope | Notes |
+| --- | --- | --- | --- |
+| GET | `/workspaces/:id/gifs/search` | `files:read` | `?q=` required, `?page=` (24 per page) |
+| GET | `/workspaces/:id/gifs/trending` | `files:read` | `?page=` |
+| POST | `/workspaces/:id/gifs/import` | `files:write` | `{ url, width, height, conversationId? }` from a search/trending result; copies it into a normal file (`files:write` quota applies) so it can be attached like any upload |
 
 ## Activity and search
 
