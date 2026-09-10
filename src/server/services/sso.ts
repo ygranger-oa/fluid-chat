@@ -145,7 +145,7 @@ export async function completeSsoLogin(input: {
           avatarUrl: profile.picture?.slice(0, 500) ?? null,
           presence: "active",
           lastActiveAt: new Date(),
-          preferences: { theme: "system", language: "system", enterToSend: true, timeFormat: "12h", notificationSound: true }
+          preferences: { theme: "system", language: "system", enterToSend: true, timeFormat: "24h", notificationSound: true }
         })
         .returning();
       await tx.update(users).set({ avatarColor: avatarColorFor(created.id) }).where(eq(users.id, created.id));
