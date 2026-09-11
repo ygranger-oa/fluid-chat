@@ -98,6 +98,12 @@ export const fr: Messages = {
     light: "clair",
     dark: "sombre"
   },
+  updates: {
+    availableTitle: "Une nouvelle version est disponible",
+    availableBody: "Actualisez quand vous etes pret pour utiliser la derniere interface.",
+    refresh: "Actualiser",
+    later: "Plus tard"
+  },
   sidebar: {
     navigation: "Navigation de l'espace de travail",
     invitePeople: "Inviter des personnes",

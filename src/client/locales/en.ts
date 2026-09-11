@@ -100,6 +100,12 @@ const enMessages = {
     light: "light",
     dark: "dark"
   },
+  updates: {
+    availableTitle: "A new version is available",
+    availableBody: "Refresh when you are ready to use the latest interface.",
+    refresh: "Refresh",
+    later: "Later"
+  },
   sidebar: {
     navigation: "Workspace navigation",
     invitePeople: "Invite people",

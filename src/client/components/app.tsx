@@ -1,5 +1,6 @@
 "use client";
 
+import { RefreshCw } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { notificationsPaused } from "@/shared/quiet-hours";
 import { ALERTING_NOTIFICATION_TYPES, AppProvider, useApp } from "../store";
@@ -100,6 +101,7 @@ function AppRoot() {
           <RightPanel />
         </div>
         <Modals />
+        <UpdatePrompt />
         <Toasts />
       </div>
     </I18nProvider>
@@ -165,6 +167,29 @@ function Modals() {
     default:
       return null;
   }
+}
+
+function UpdatePrompt() {
+  const { state, actions } = useApp();
+  const { t } = useI18n();
+  if (!state.updatePrompt) return null;
+
+  return (
+    <div className="update-prompt" role="status" aria-live="polite">
+      <div>
+        <strong>{t("updates.availableTitle")}</strong>
+        <span>{t("updates.availableBody")}</span>
+      </div>
+      <div className="update-prompt-actions">
+        <button type="button" className="button primary small" onClick={() => window.location.reload()}>
+          <RefreshCw size={14} /> {t("updates.refresh")}
+        </button>
+        <button type="button" className="button ghost small" onClick={actions.dismissUpdatePrompt}>
+          {t("updates.later")}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function Toasts() {

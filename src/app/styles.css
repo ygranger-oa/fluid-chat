@@ -3358,6 +3358,10 @@ textarea:focus {
   max-width: 380px;
 }
 
+.app-shell:has(.update-prompt) .toast-stack {
+  bottom: calc(var(--space-4) + 96px);
+}
+
 .toast {
   padding: 12px 14px;
   border-radius: var(--radius-md);
@@ -3374,6 +3378,69 @@ textarea:focus {
 
 .toast.is-success {
   background: var(--primary);
+}
+
+/* =========================================================================
+   Update prompt
+   ========================================================================= */
+
+.update-prompt {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+}
+
+.update-prompt div:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.update-prompt strong {
+  font-size: 14px;
+}
+
+.update-prompt span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.update-prompt-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+}
+
+@media (max-width: 640px) {
+  .update-prompt {
+    left: var(--space-3);
+    right: var(--space-3);
+    bottom: var(--space-3);
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .update-prompt-actions {
+    justify-content: flex-end;
+  }
+
+  .app-shell:has(.update-prompt) .toast-stack {
+    left: var(--space-3);
+    right: var(--space-3);
+    bottom: 148px;
+    max-width: none;
+  }
 }
 
 /* =========================================================================

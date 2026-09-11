@@ -49,7 +49,7 @@ curl -s localhost:3000/api/meta/openapi.json > openapi.json
 | PATCH | `/users/me/preferences` | `users:write` | Theme, language, density, notifications, keywords, skin tone |
 | PUT | `/users/me/status` | `users:write` | Emoji, text, optional expiry |
 | PUT | `/users/me/presence` | `users:write` | `active` / `away` / `dnd` / `offline` (+ `dndUntil`) |
-| POST | `/users/me/heartbeat` | `users:write` | Keeps presence fresh; called by the client every minute |
+| POST | `/users/me/heartbeat` | `users:write` | Keeps presence fresh and returns the current generated `BUILD_VERSION`; called by the client every minute |
 | GET | `/users/:userId` | `users:read` | Profile, restricted to shared workspaces |
 | GET | `/workspaces/:workspaceId/directory` | `users:read` | People and groups for @-autocomplete |
 

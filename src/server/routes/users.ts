@@ -9,6 +9,7 @@ import { defineRoutes } from "../router";
 import { toPublicUser, toSessionUser } from "../services/serializers";
 import { broadcastUserUpdate, heartbeat, setPresence, setStatus } from "../services/presence";
 import { workspaceMentionDirectory } from "../services/mentions";
+import { appVersion } from "../services/app-version";
 
 const profileSchema = z.object({
   displayName: z.string().min(1).max(120).optional(),
@@ -123,7 +124,7 @@ export const userRoutes = defineRoutes({
   "POST /users/me/heartbeat": async (ctx) => {
     const user = await ctx.user();
     const updated = await heartbeat(user.id, "active");
-    return { presence: toPublicUser(updated ?? user).presence };
+    return { presence: toPublicUser(updated ?? user).presence, appVersion: appVersion() };
   },
 
   "GET /users/:userId": async (ctx) => {

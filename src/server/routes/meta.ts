@@ -4,6 +4,7 @@ import { TOKEN_PREFIX } from "@/lib/api-auth";
 import { defineRoutes } from "../router";
 import { DEFAULT_MESSAGE_LIMIT, DEFAULT_RATE_LIMIT, MAX_RATE_LIMIT } from "../services/api-keys";
 import { describeRoutes, openApiDocument } from "../services/openapi";
+import { appVersion } from "../services/app-version";
 
 const appUrl = () => process.env.APP_URL ?? "http://localhost:3000";
 
@@ -16,6 +17,7 @@ export const metaRoutes = defineRoutes({
   "GET /meta": () => ({
     name: "Fluid Chat API",
     version: "1.0.0",
+    appVersion: appVersion(),
     authentication: {
       header: "Authorization: Bearer <token>",
       alternativeHeader: "X-Api-Key: <token>",

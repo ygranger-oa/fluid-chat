@@ -25,6 +25,7 @@ import { playNotificationSound, unlockNotificationSound } from "./sound";
 import { notificationsPaused } from "@/shared/quiet-hours";
 import { toggleReactionGroup, withReacted } from "@/shared/reactions";
 import type { MentionDirectory } from "@/shared/mention-text";
+import { BUILD_VERSION } from "@/generated/build-info";
 import type {
   ConversationSummary,
   MessageDto,
@@ -93,6 +94,7 @@ export type ModalState =
   | null;
 
 export type Toast = { id: string; text: string; tone: "info" | "error" | "success" };
+export type UpdatePrompt = { currentVersion: string; availableVersion: string } | null;
 
 export type MessageBucket = { items: MessageDto[]; hasMore: boolean; loading: boolean };
 
@@ -112,6 +114,8 @@ export type State = {
   unreadNotifications: number;
   drafts: Record<string, string>;
   toasts: Toast[];
+  updatePrompt: UpdatePrompt;
+  dismissedUpdateVersion: string | null;
   connected: boolean;
   lastReadMarkers: Record<string, string | null>;
   editingMessageId: string | null;
@@ -134,6 +138,8 @@ const initialState: State = {
   unreadNotifications: 0,
   drafts: {},
   toasts: [],
+  updatePrompt: null,
+  dismissedUpdateVersion: null,
   connected: false,
   lastReadMarkers: {},
   editingMessageId: null,
@@ -169,6 +175,8 @@ type Action =
   | { type: "sidebar"; open: boolean }
   | { type: "toast"; toast: Toast }
   | { type: "dismiss-toast"; id: string }
+  | { type: "app-version"; appVersion: string }
+  | { type: "dismiss-update-prompt" }
   | { type: "reset" };
 
 export function typingKey(conversationId: string, parentMessageId?: string | null) {
@@ -437,6 +445,21 @@ function reducer(state: State, action: Action): State {
       return { ...state, toasts: [...state.toasts, action.toast].slice(-4) };
     case "dismiss-toast":
       return { ...state, toasts: state.toasts.filter((toast) => toast.id !== action.id) };
+    case "app-version":
+      if (!state.updatePrompt && !state.session) return state;
+      if (state.dismissedUpdateVersion === action.appVersion) return state;
+      if (!state.updatePrompt && action.appVersion) {
+        const currentVersion = loadedAppVersion();
+        if (!currentVersion || currentVersion === action.appVersion) return state;
+        return { ...state, updatePrompt: { currentVersion, availableVersion: action.appVersion } };
+      }
+      return state;
+    case "dismiss-update-prompt":
+      return {
+        ...state,
+        dismissedUpdateVersion: state.updatePrompt?.availableVersion ?? state.dismissedUpdateVersion,
+        updatePrompt: null
+      };
     case "reset":
       return { ...initialState, status: "anonymous" };
     default:
@@ -460,6 +483,10 @@ export function useApp() {
 
 function draftKey(conversationId: string, parentMessageId?: string | null) {
   return `${conversationId}:${parentMessageId ?? "root"}`;
+}
+
+function loadedAppVersion() {
+  return BUILD_VERSION;
 }
 
 function useActions(state: State, dispatch: React.Dispatch<Action>) {
@@ -860,6 +887,7 @@ function useActions(state: State, dispatch: React.Dispatch<Action>) {
       upsertMessage: (message: MessageDto) => dispatch({ type: "upsert-message", message }),
       setSession: (session: SessionUser | null, memberships: WorkspaceMembership[]) =>
         dispatch({ type: "session", session, memberships }),
+      dismissUpdatePrompt: () => dispatch({ type: "dismiss-update-prompt" }),
       dismissToast: (id: string) => dispatch({ type: "dismiss-toast", id })
     }),
     [
@@ -1131,9 +1159,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (document.visibilityState === "visible") {
         void api.users
           .heartbeat()
-          .then(({ presence }) => {
+          .then(({ presence, appVersion }) => {
             const userId = stateRef.current.session?.id;
             if (userId) dispatch({ type: "presence", userId, presence });
+            dispatch({ type: "app-version", appVersion });
           })
           .catch(() => undefined);
         actions.socketRef.current?.emit("heartbeat");
