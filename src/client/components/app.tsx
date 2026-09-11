@@ -72,13 +72,15 @@ function AppRoot() {
     );
   }
 
+  const hasWorkspaceRail = state.memberships.length > 1;
+
   return (
     <I18nProvider preferences={state.session.preferences}>
       <LanguageEffect />
       <div className={`app-shell ${state.sidebarOpen ? "sidebar-open" : ""}`}>
         <TopBar />
-        <div className="app-body">
-          <WorkspaceRail />
+        <div className={`app-body ${hasWorkspaceRail ? "has-workspace-rail" : ""}`}>
+          {hasWorkspaceRail ? <WorkspaceRail /> : null}
           <Sidebar />
           {state.sidebarOpen ? (
             <SidebarScrim />

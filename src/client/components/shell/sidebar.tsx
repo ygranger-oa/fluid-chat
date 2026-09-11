@@ -293,7 +293,7 @@ export function Sidebar() {
               onRenameChannel={setRenameTarget}
             />
           ))}
-          <button type="button" className="side-row is-muted" onClick={() => actions.setView({ kind: "browse" })}>
+          <button type="button" className="side-row is-muted is-channel-row" onClick={() => actions.setView({ kind: "browse" })}>
             <Plus size={15} />
             <span className="side-label">{t("sidebar.addChannels")}</span>
           </button>
@@ -318,7 +318,7 @@ export function Sidebar() {
             <ConversationRow key={conversation.id} conversation={conversation} siblings={groups.dms} onRenameChannel={setRenameTarget} />
           ))}
           {groups.dms.length === 0 ? (
-            <button type="button" className="side-row is-muted" onClick={() => actions.setModal({ kind: "new-dm" })}>
+            <button type="button" className="side-row is-muted is-dm-row" onClick={() => actions.setModal({ kind: "new-dm" })}>
               <Send size={15} />
               <span className="side-label">{t("sidebar.startConversation")}</span>
             </button>
@@ -454,7 +454,7 @@ function ConversationRow({
   };
 
   return (
-    <div className={`side-row-wrap ${active ? "is-active" : ""}`}>
+    <div className={`side-row-wrap ${conversation.type === "channel" ? "is-channel" : "is-dm"} ${active ? "is-active" : ""}`}>
       <button
         type="button"
         className={`side-row ${unread ? "is-unread" : ""}`}

@@ -589,11 +589,19 @@ textarea:focus {
 .app-body {
   position: relative;
   display: grid;
-  grid-template-columns: 68px 260px minmax(0, 1fr);
+  grid-template-columns: 260px minmax(0, 1fr);
   min-height: 0;
 }
 
 .app-body:has(.right-panel) {
+  grid-template-columns: 260px minmax(0, 1fr) minmax(320px, 400px);
+}
+
+.app-body.has-workspace-rail {
+  grid-template-columns: 68px 260px minmax(0, 1fr);
+}
+
+.app-body.has-workspace-rail:has(.right-panel) {
   grid-template-columns: 68px 260px minmax(0, 1fr) minmax(320px, 400px);
 }
 
@@ -861,6 +869,13 @@ textarea:focus {
   position: relative;
   display: flex;
   align-items: center;
+}
+
+.side-row-wrap.is-channel .side-row,
+.side-row.is-channel-row,
+.side-row-wrap.is-dm .side-row,
+.side-row.is-dm-row {
+  padding-left: 16px;
 }
 
 .side-row.is-unread {
@@ -3439,6 +3454,10 @@ textarea:focus {
 
 @media (max-width: 1100px) {
   .app-body:has(.right-panel) {
+    grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 360px);
+  }
+
+  .app-body.has-workspace-rail:has(.right-panel) {
     grid-template-columns: 68px 220px minmax(0, 1fr) minmax(300px, 360px);
   }
 }
@@ -3475,6 +3494,10 @@ textarea:focus {
   }
 
   .sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+
+  .sidebar-open .app-body.has-workspace-rail .sidebar {
     transform: translateX(68px);
   }
 
