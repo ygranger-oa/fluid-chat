@@ -3139,6 +3139,17 @@ textarea:focus {
   gap: var(--space-3);
 }
 
+.api-key-edit-row {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.api-key-edit-form {
+  flex: 1 0 100%;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+
 .scope-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));

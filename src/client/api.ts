@@ -28,7 +28,7 @@ export type ApiKeyDto = {
   prefix: string;
   scopes: string[];
   workspaceId: string;
-  actor: { id: string; displayName: string; handle: string | null; isBot: boolean };
+  actor: { id: string; displayName: string; handle: string | null; avatarUrl: string | null; avatarColor: string | null; isBot: boolean };
   rateLimitPerMinute: number;
   messageLimitPerMinute: number;
   requestCount: number;
@@ -48,6 +48,11 @@ export type CreateApiKeyInput = {
   rateLimitPerMinute?: number;
   messageLimitPerMinute?: number;
   expiresInDays?: number | null;
+};
+
+export type UpdateApiKeyInput = Partial<CreateApiKeyInput> & {
+  actorDisplayName?: string;
+  actorAvatarUrl?: string | null;
 };
 
 export class ApiError extends Error {
@@ -192,7 +197,7 @@ export const api = {
       ),
     create: (workspaceId: string, input: CreateApiKeyInput) =>
       post<{ apiKey: ApiKeyDto; token: string }>(`/workspaces/${workspaceId}/api-keys`, input),
-    update: (keyId: string, input: Partial<CreateApiKeyInput>) =>
+    update: (keyId: string, input: UpdateApiKeyInput) =>
       patch<{ apiKey: ApiKeyDto }>(`/api-keys/${keyId}`, input),
     rotate: (keyId: string) => post<{ apiKey: ApiKeyDto; token: string }>(`/api-keys/${keyId}/rotate`),
     revoke: (keyId: string) => del<{ ok: true }>(`/api-keys/${keyId}`)

@@ -42,6 +42,29 @@ Only a SHA-256 hash is stored. Lose the secret and you rotate it; there is no wa
 Bot identities hold a real workspace membership (`botRole`: `member` or `admin`), so the ordinary
 permission rules apply to them. They do **not** consume a billable seat.
 
+### Bot name and avatar
+
+A bot key posts as the bot user created for that key. The `name` used when the key is created becomes
+the bot display name, so choose the integration name people should see in message lists.
+
+To set a custom logo/avatar, give the key `users:write` and update the bot profile with the key
+itself:
+
+```bash
+curl -X PATCH "$APP_URL/api/users/me" \
+  -H "Authorization: Bearer $FLUID_API_KEY" \
+  -H 'content-type: application/json' \
+  -d '{
+    "displayName": "Release bot",
+    "avatarUrl": "https://assets.example.com/release-bot.png"
+  }'
+```
+
+`/users/me` always addresses the key's own actor. For a bot key that means the bot; for a `self`
+key it means the human user who created it. If messages render as "Someone" or "Unknown", make sure
+the key was created with `identity: "bot"` and that the bot is a member of the workspace/conversation
+where it posts.
+
 ## Calling the API
 
 ```bash

@@ -37,7 +37,9 @@ const updateSchema = z.object({
   scopes: scopeList.optional(),
   rateLimitPerMinute: z.number().int().min(1).max(MAX_RATE_LIMIT).optional(),
   messageLimitPerMinute: z.number().int().min(1).max(MAX_RATE_LIMIT).optional(),
-  expiresInDays: z.number().int().min(1).max(3650).nullable().optional()
+  expiresInDays: z.number().int().min(1).max(3650).nullable().optional(),
+  actorDisplayName: z.string().min(1).max(120).optional(),
+  actorAvatarUrl: z.string().max(500).nullable().optional()
 });
 
 export const apiKeyRoutes = defineRoutes({
@@ -83,7 +85,8 @@ export const apiKeyRoutes = defineRoutes({
       name: updated.name,
       scopes: updated.scopes
     });
-    return { apiKey: serializeApiKey(updated, actor) };
+    const refreshed = await loadApiKey(key.id);
+    return { apiKey: serializeApiKey(updated, refreshed.actor) };
   },
 
   "POST /api-keys/:keyId/rotate": async (ctx) => {

@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Hash, Lock, RefreshCw, Trash2 } from "lucide-react";
+import { Hash, Lock, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import type { ChannelSummary, CustomEmojiDto, PublicUser } from "@/shared/types";
-import { api } from "../../api";
+import { ApiError, api } from "../../api";
 import type { ApiKeyDto } from "../../api";
 import { formatRelative } from "../../format";
 import { useI18n } from "../../i18n";
@@ -23,6 +23,17 @@ type InviteRow = {
   revokedAt: string | null;
   useCount: number;
   maxUses: number | null;
+};
+
+type ApiKeyEditForm = {
+  id: string;
+  name: string;
+  actorDisplayName: string;
+  actorAvatarUrl: string;
+  scopes: string[];
+  rateLimitPerMinute: number;
+  messageLimitPerMinute: number;
+  expiresInDays: string;
 };
 
 export function AdminConsole({ onClose }: { onClose: () => void }) {
@@ -407,6 +418,7 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
   const [keys, setKeys] = useState<ApiKeyDto[] | null>(null);
   const [catalogue, setCatalogue] = useState<Array<{ scope: string; summary: string }>>([]);
   const [secret, setSecret] = useState<{ token: string; name: string } | null>(null);
+  const [editing, setEditing] = useState<ApiKeyEditForm | null>(null);
   const [form, setForm] = useState({
     name: "",
     identity: "bot" as "bot" | "self",
@@ -439,6 +451,30 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
         ? current.scopes.filter((entry) => entry !== scope)
         : [...current.scopes, scope]
     }));
+
+  const toggleEditScope = (scope: string) =>
+    setEditing((current) =>
+      current
+        ? {
+            ...current,
+            scopes: current.scopes.includes(scope)
+              ? current.scopes.filter((entry) => entry !== scope)
+              : [...current.scopes, scope]
+          }
+        : current
+    );
+
+  const startEditing = (key: ApiKeyDto) =>
+    setEditing({
+      id: key.id,
+      name: key.name,
+      actorDisplayName: key.actor.displayName,
+      actorAvatarUrl: key.actor.avatarUrl ?? "",
+      scopes: key.scopes,
+      rateLimitPerMinute: key.rateLimitPerMinute,
+      messageLimitPerMinute: key.messageLimitPerMinute,
+      expiresInDays: ""
+    });
 
   return (
     <div className="stack-form">
@@ -493,6 +529,14 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
             setForm({ ...form, name: "" });
             load();
           } catch (error) {
+            if (error instanceof ApiError && error.code === "bot_display_name_taken") {
+              actions.toast(t("admin.botDisplayNameTaken"), "error");
+              return;
+            }
+            if (error instanceof ApiError && error.code === "bot_handle_taken") {
+              actions.toast(t("admin.botIdentifierTaken"), "error");
+              return;
+            }
             actions.fail(error);
           }
         }}
@@ -589,9 +633,12 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
       ) : (
         <div className="admin-list">
           {keys.length === 0 ? <p className="muted">{t("admin.noApiKeys")}</p> : null}
-          {keys.map((key) => (
-            <div key={key.id} className="admin-row">
+          {keys.map((key) => {
+            const isEditing = editing?.id === key.id;
+            return (
+            <div key={key.id} className={isEditing ? "admin-row api-key-edit-row" : "admin-row"}>
               <div className="admin-row-main">
+                {key.actor.isBot ? <Avatar user={{ ...key.actor, presence: "offline" }} size={32} presence={false} /> : null}
                 <span>
                   <strong>
                     {key.name} <code>{key.prefix}…</code>
@@ -606,6 +653,9 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
                 </span>
               </div>
               <div className="admin-row-actions">
+                <button type="button" className="button ghost" onClick={() => startEditing(key)}>
+                  <Pencil size={13} /> {t("common.edit")}
+                </button>
                 <button
                   type="button"
                   className="button ghost"
@@ -638,8 +688,126 @@ function ApiKeys({ workspaceId }: { workspaceId: string }) {
                   {t("common.revoke")}
                 </button>
               </div>
+              {isEditing ? (
+                <form
+                  className="stack-form api-key-edit-form"
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    if (editing.scopes.length === 0) {
+                      actions.toast(t("admin.grantScope"), "error");
+                      return;
+                    }
+                    try {
+                      await api.apiKeys.update(key.id, {
+                        name: editing.name.trim(),
+                        scopes: editing.scopes,
+                        rateLimitPerMinute: editing.rateLimitPerMinute,
+                        messageLimitPerMinute: editing.messageLimitPerMinute,
+                        expiresInDays: editing.expiresInDays === "" ? undefined : Number(editing.expiresInDays),
+                        ...(key.actor.isBot
+                          ? {
+                              actorDisplayName: editing.actorDisplayName.trim(),
+                              actorAvatarUrl: editing.actorAvatarUrl.trim() || null
+                            }
+                          : {})
+                      });
+                      setEditing(null);
+                      load();
+                      await actions.refreshBootstrap();
+                    } catch (error) {
+                      if (error instanceof ApiError && error.code === "bot_display_name_taken") {
+                        actions.toast(t("admin.botDisplayNameTaken"), "error");
+                        return;
+                      }
+                      if (error instanceof ApiError && error.code === "bot_handle_taken") {
+                        actions.toast(t("admin.botIdentifierTaken"), "error");
+                        return;
+                      }
+                      actions.fail(error);
+                    }
+                  }}
+                >
+                  <div className="api-key-row">
+                    <label className="field">
+                      {t("admin.keyName")}
+                      <input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} required />
+                    </label>
+                    {key.actor.isBot ? (
+                      <>
+                        <label className="field">
+                          {t("admin.botDisplayName")}
+                          <input
+                            value={editing.actorDisplayName}
+                            onChange={(event) => setEditing({ ...editing, actorDisplayName: event.target.value })}
+                            required
+                          />
+                        </label>
+                        <label className="field">
+                          {t("admin.botAvatarUrl")}
+                          <input
+                            value={editing.actorAvatarUrl}
+                            onChange={(event) => setEditing({ ...editing, actorAvatarUrl: event.target.value })}
+                            placeholder="https://assets.example.com/bot.png"
+                          />
+                        </label>
+                      </>
+                    ) : null}
+                    <label className="field">
+                      {t("admin.requestsMinute")}
+                      <input
+                        type="number"
+                        min={1}
+                        max={6000}
+                        value={editing.rateLimitPerMinute}
+                        onChange={(event) => setEditing({ ...editing, rateLimitPerMinute: Number(event.target.value) })}
+                      />
+                    </label>
+                    <label className="field">
+                      {t("admin.messagesMinute")}
+                      <input
+                        type="number"
+                        min={1}
+                        max={6000}
+                        value={editing.messageLimitPerMinute}
+                        onChange={(event) => setEditing({ ...editing, messageLimitPerMinute: Number(event.target.value) })}
+                      />
+                    </label>
+                    <label className="field">
+                      {t("admin.expiresDays")}
+                      <input
+                        type="number"
+                        min={1}
+                        value={editing.expiresInDays}
+                        placeholder={key.expiresAt ? t("admin.keepCurrent") : t("admin.never")}
+                        onChange={(event) => setEditing({ ...editing, expiresInDays: event.target.value })}
+                      />
+                    </label>
+                  </div>
+                  <fieldset className="scope-grid">
+                    <legend>{t("admin.scopes")}</legend>
+                    {catalogue.map((entry) => (
+                      <label key={entry.scope} className="checkbox-field">
+                        <input type="checkbox" checked={editing.scopes.includes(entry.scope)} onChange={() => toggleEditScope(entry.scope)} />
+                        <span>
+                          <strong>{entry.scope}</strong>
+                          <small>{entry.summary}</small>
+                        </span>
+                      </label>
+                    ))}
+                  </fieldset>
+                  <div className="admin-row-actions">
+                    <button type="button" className="button ghost" onClick={() => setEditing(null)}>
+                      {t("common.cancel")}
+                    </button>
+                    <button type="submit" className="button primary">
+                      {t("common.saveChanges")}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

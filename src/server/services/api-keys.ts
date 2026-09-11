@@ -1,5 +1,4 @@
-import { randomUUID } from "node:crypto";
-import { and, desc, eq, isNull, ne } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { apiKeys, users, workspaceMembers } from "@/db/schema";
 import type { ApiKey, User } from "@/db/schema";
@@ -27,7 +26,7 @@ export type CreateApiKeyInput = {
   creator: User;
 };
 
-export function serializeApiKey(key: ApiKey, actor?: Pick<User, "id" | "displayName" | "handle" | "isBot"> | null) {
+export function serializeApiKey(key: ApiKey, actor?: Pick<User, "id" | "displayName" | "handle" | "avatarUrl" | "avatarColor" | "isBot"> | null) {
   return {
     id: key.id,
     name: key.name,
@@ -35,8 +34,8 @@ export function serializeApiKey(key: ApiKey, actor?: Pick<User, "id" | "displayN
     scopes: key.scopes,
     workspaceId: key.workspaceId,
     actor: actor
-      ? { id: actor.id, displayName: actor.displayName, handle: actor.handle, isBot: actor.isBot }
-      : { id: key.actorUserId, displayName: "Unknown", handle: null, isBot: key.actorIsBot },
+      ? { id: actor.id, displayName: actor.displayName, handle: actor.handle, avatarUrl: actor.avatarUrl, avatarColor: actor.avatarColor, isBot: actor.isBot }
+      : { id: key.actorUserId, displayName: "Unknown", handle: null, avatarUrl: null, avatarColor: null, isBot: key.actorIsBot },
     rateLimitPerMinute: key.rateLimitPerMinute,
     messageLimitPerMinute: key.messageLimitPerMinute,
     requestCount: key.requestCount,
@@ -80,6 +79,7 @@ export async function loadApiKey(keyId: string) {
 export async function createApiKey(input: CreateApiKeyInput) {
   const scopes = parseScopes(input.scopes);
   assertCanGrantScopes(scopes);
+  const name = input.name.trim();
 
   const live = await db
     .select({ id: apiKeys.id })
@@ -95,12 +95,14 @@ export async function createApiKey(input: CreateApiKeyInput) {
     let actorUserId = input.creator.id;
 
     if (input.identity === "bot") {
-      const handle = `${slugForBot(input.name)}-${randomUUID().slice(0, 6)}`;
+      await assertBotDisplayNameAvailable(tx, input.workspaceId, name);
+      const handle = slugForBot(name);
+      await assertBotHandleAvailable(tx, handle);
       const [bot] = await tx
         .insert(users)
         .values({
           email: `${handle}@bots.fluidchat.invalid`,
-          displayName: input.name,
+          displayName: name,
           handle,
           isBot: true,
           presence: "active",
@@ -121,7 +123,7 @@ export async function createApiKey(input: CreateApiKeyInput) {
       .insert(apiKeys)
       .values({
         workspaceId: input.workspaceId,
-        name: input.name,
+        name,
         prefix,
         tokenHash: hash,
         actorUserId,
@@ -148,25 +150,55 @@ export async function updateApiKey(
     rateLimitPerMinute?: number;
     messageLimitPerMinute?: number;
     expiresInDays?: number | null;
+    actorDisplayName?: string;
+    actorAvatarUrl?: string | null;
   }
 ) {
   const scopes = input.scopes ? parseScopes(input.scopes) : undefined;
   if (scopes) assertCanGrantScopes(scopes);
+  const actorDisplayName = input.actorDisplayName?.trim();
 
-  const [updated] = await db
-    .update(apiKeys)
-    .set({
-      name: input.name,
-      scopes,
-      rateLimitPerMinute: input.rateLimitPerMinute,
-      messageLimitPerMinute: input.messageLimitPerMinute,
-      expiresAt: input.expiresInDays === undefined ? undefined : input.expiresInDays ? addDays(input.expiresInDays) : null,
-      updatedAt: new Date()
-    })
-    .where(and(eq(apiKeys.id, keyId), isNull(apiKeys.revokedAt)))
-    .returning();
-  if (!updated) throw new HttpError(404, "API key not found or already revoked", "not_found");
-  return updated;
+  return db.transaction(async (tx) => {
+    const [current] = await tx
+      .select()
+      .from(apiKeys)
+      .where(and(eq(apiKeys.id, keyId), isNull(apiKeys.revokedAt)))
+      .limit(1);
+    if (!current) throw new HttpError(404, "API key not found or already revoked", "not_found");
+
+    if ((input.actorDisplayName !== undefined || input.actorAvatarUrl !== undefined) && !current.actorIsBot) {
+      throw new HttpError(400, "Only bot API keys can edit actor branding", "actor_not_bot");
+    }
+    if (actorDisplayName !== undefined) {
+      await assertBotDisplayNameAvailable(tx, current.workspaceId, actorDisplayName, current.actorUserId);
+    }
+
+    const [updated] = await tx
+      .update(apiKeys)
+      .set({
+        name: input.name,
+        scopes,
+        rateLimitPerMinute: input.rateLimitPerMinute,
+        messageLimitPerMinute: input.messageLimitPerMinute,
+        expiresAt: input.expiresInDays === undefined ? undefined : input.expiresInDays ? addDays(input.expiresInDays) : null,
+        updatedAt: new Date()
+      })
+      .where(eq(apiKeys.id, current.id))
+      .returning();
+
+    if (input.actorDisplayName !== undefined || input.actorAvatarUrl !== undefined) {
+      await tx
+        .update(users)
+        .set({
+          displayName: actorDisplayName,
+          avatarUrl: input.actorAvatarUrl,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, current.actorUserId));
+    }
+
+    return updated;
+  });
 }
 
 /** Rotation keeps the key's identity and scopes, and invalidates the old secret. */
@@ -223,4 +255,41 @@ function parseScopes(requested: string[]) {
 
 function slugForBot(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24) || "api";
+}
+
+async function assertBotDisplayNameAvailable(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  workspaceId: string,
+  displayName: string,
+  exceptUserId?: string
+) {
+  const [existing] = await tx
+    .select({ id: users.id })
+    .from(workspaceMembers)
+    .innerJoin(users, eq(users.id, workspaceMembers.userId))
+    .where(
+      and(
+        eq(workspaceMembers.workspaceId, workspaceId),
+        eq(workspaceMembers.status, "active"),
+        eq(users.isBot, true),
+        sql`lower(trim(${users.displayName})) = lower(trim(${displayName}))`,
+        exceptUserId ? ne(users.id, exceptUserId) : undefined
+      )
+    )
+    .limit(1);
+
+  if (existing) throw new HttpError(409, "Display name already used", "bot_display_name_taken");
+}
+
+async function assertBotHandleAvailable(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  handle: string
+) {
+  const [existing] = await tx
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.handle, handle))
+    .limit(1);
+
+  if (existing) throw new HttpError(409, "Bot identifier already used", "bot_handle_taken");
 }
